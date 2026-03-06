@@ -1,0 +1,13 @@
+services:
+  dashboard:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      # DBを永続化（コンテナ再起動でもデータ保持）
+      - dashboard_data:/app
+    environment:
+      - STREAMLIT_SERVER_HEADLESS=true
+
+volumes:
+  dashboard_data:

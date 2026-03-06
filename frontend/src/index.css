@@ -1,0 +1,258 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.75rem;
+  /* Base */
+  --background: #F8F9FA;
+  --foreground: #111827;
+  /* Card / Surface */
+  --card: #FFFFFF;
+  --card-foreground: #111827;
+  --popover: #FFFFFF;
+  --popover-foreground: #111827;
+  /* Primary */
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  /* Secondary */
+  --secondary: #F3F4F6;
+  --secondary-foreground: #111827;
+  /* Muted */
+  --muted: #F3F4F6;
+  --muted-foreground: #6B7280;
+  /* Accent */
+  --accent: #F3F4F6;
+  --accent-foreground: #111827;
+  /* Destructive */
+  --destructive: #EF4444;
+  /* Border / Input */
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: #6366f1;
+  /* Chart */
+  --chart-1: #E1306C;
+  --chart-2: #00B900;
+  --chart-3: #4285F4;
+  --chart-4: #EA4335;
+  --chart-5: #6366F1;
+  /* Sidebar */
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #111827;
+  --sidebar-primary: #6366f1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #F3F4F6;
+  --sidebar-accent-foreground: #111827;
+  --sidebar-border: #E5E7EB;
+  --sidebar-ring: #6366f1;
+}
+
+.dark {
+  /* Base - ダークブルーグレーの背景にソフトホワイトのテキスト */
+  --background: #0F172A;
+  --foreground: #E2E8F0;
+  /* Card / Surface - 背景より少し明るいカード */
+  --card: #1E293B;
+  --card-foreground: #E2E8F0;
+  --popover: #1E293B;
+  --popover-foreground: #E2E8F0;
+  /* Primary - 彩度を少し落として目に優しく */
+  --primary: #818CF8;
+  --primary-foreground: #0F172A;
+  /* Secondary */
+  --secondary: #1E293B;
+  --secondary-foreground: #CBD5E1;
+  /* Muted */
+  --muted: #1E293B;
+  --muted-foreground: #A1AFCA;
+  /* Accent */
+  --accent: #1E293B;
+  --accent-foreground: #E2E8F0;
+  /* Destructive */
+  --destructive: #F87171;
+  /* Border / Input - 控えめなボーダー */
+  --border: #334155;
+  --input: #334155;
+  --ring: #818CF8;
+  /* Chart - ダークモード用に彩度を調整 */
+  --chart-1: #F472B6;
+  --chart-2: #34D399;
+  --chart-3: #60A5FA;
+  --chart-4: #F87171;
+  --chart-5: #A78BFA;
+  /* Sidebar */
+  --sidebar: #0F172A;
+  --sidebar-foreground: #E2E8F0;
+  --sidebar-primary: #818CF8;
+  --sidebar-primary-foreground: #0F172A;
+  --sidebar-accent: #1E293B;
+  --sidebar-accent-foreground: #E2E8F0;
+  --sidebar-border: #334155;
+  --sidebar-ring: #818CF8;
+  /* Platform colors - ダークモードオーバーライド */
+  --color-instagram: #F472B6;
+  --color-instagram-light: rgba(244, 114, 182, 0.15);
+  --color-line-green: #34D399;
+  --color-line-light: rgba(52, 211, 153, 0.15);
+  --color-ga4: #60A5FA;
+  --color-ga4-light: rgba(96, 165, 250, 0.15);
+  --color-gbp: #F87171;
+  --color-gbp-light: rgba(248, 113, 113, 0.15);
+  --color-summary: #A78BFA;
+  --color-summary-light: rgba(167, 139, 250, 0.15);
+  /* Semantic colors - ダークモードオーバーライド */
+  --color-success: #34D399;
+  --color-success-bg: rgba(52, 211, 153, 0.15);
+  --color-danger: #F87171;
+  --color-danger-bg: rgba(248, 113, 113, 0.15);
+  --color-warning: #FBBF24;
+  --color-warning-bg: rgba(251, 191, 36, 0.15);
+  --color-neutral: #94A3B8;
+  --color-neutral-bg: rgba(148, 163, 184, 0.1);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@theme {
+  /* Platform colors - Light mode */
+  --color-instagram: #E1306C;
+  --color-instagram-light: #FCE7EF;
+  --color-line-green: #00B900;
+  --color-line-light: #E6F9E6;
+  --color-ga4: #4285F4;
+  --color-ga4-light: #EBF2FF;
+  --color-gbp: #EA4335;
+  --color-gbp-light: #FDECE9;
+  --color-summary: #6366F1;
+  --color-summary-light: #EEF2FF;
+  /* Semantic colors - Light mode */
+  --color-success: #10B981;
+  --color-success-bg: #ECFDF5;
+  --color-danger: #EF4444;
+  --color-danger-bg: #FEF2F2;
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FFFBEB;
+  --color-neutral: #6B7280;
+  --color-neutral-bg: #F9FAFB;
+  /* Platform colors - Dark mode */
+  --color-instagram-dark: #F472B6;
+  --color-instagram-light-dark: rgba(244, 114, 182, 0.15);
+  --color-line-green-dark: #34D399;
+  --color-line-light-dark: rgba(52, 211, 153, 0.15);
+  --color-ga4-dark: #60A5FA;
+  --color-ga4-light-dark: rgba(96, 165, 250, 0.15);
+  --color-gbp-dark: #F87171;
+  --color-gbp-light-dark: rgba(248, 113, 113, 0.15);
+  --color-summary-dark: #A78BFA;
+  --color-summary-light-dark: rgba(167, 139, 250, 0.15);
+  /* Semantic colors - Dark mode */
+  --color-success-dark: #34D399;
+  --color-success-bg-dark: rgba(52, 211, 153, 0.15);
+  --color-danger-dark: #F87171;
+  --color-danger-bg-dark: rgba(248, 113, 113, 0.15);
+  --color-warning-dark: #FBBF24;
+  --color-warning-bg-dark: rgba(251, 191, 36, 0.15);
+  --color-neutral-dark: #94A3B8;
+  --color-neutral-bg-dark: rgba(148, 163, 184, 0.1);
+  /* Fonts */
+  --font-sans: "Inter", "Noto Sans JP", -apple-system, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Inter", ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+    min-height: 100vh;
+  }
+
+  /* ダークモード切り替え時のスムーズなトランジション */
+  html.theme-transition,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease,
+      box-shadow 0.3s ease, fill 0.3s ease, stroke 0.3s ease !important;
+    transition-delay: 0s !important;
+  }
+
+  /* ダークモード color-scheme */
+  html.dark {
+    color-scheme: dark;
+  }
+
+  /* タッチデバイス最適化 */
+  @media (hover: none) {
+    /* タッチデバイスでhoverスタイルを抑制 */
+    .hover\:-translate-y-0\.5:hover {
+      transform: none;
+    }
+  }
+
+  /* iOS safe area */
+  :root {
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* iOSのフォームzoom防止 */
+  @supports (-webkit-touch-callout: none) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  /* スムーズスクロール */
+  html {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* タップハイライト制御 */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
