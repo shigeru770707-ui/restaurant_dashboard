@@ -29,6 +29,10 @@ Thumbs.db
 # Service account keys
 *.json
 !package.json
+!tsconfig.json
+!tsconfig.*.json
+!eslint.config.js
+!components.json
 
 # Logs
 *.log
