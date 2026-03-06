@@ -35,6 +35,14 @@ export default function Summary() {
   const igEngRate = ig.current.reach > 0 ? (ig.current.impressions / ig.current.reach) * 10 : 0
   const prevIgEngRate = ig.previous.reach > 0 ? (ig.previous.impressions / ig.previous.reach) * 10 : 0
 
+  const topPosts = ig.posts
+    .map((p) => {
+      const eng = p.like_count + p.comments_count + (p.saved ?? 0) + (p.shares ?? 0)
+      return { ...p, engRate: p.reach > 0 ? (eng / p.reach) * 100 : 0 }
+    })
+    .sort((a, b) => b.engRate - a.engRate)
+    .slice(0, 3)
+
   const alerts = getAlerts(data)
 
   const trendData = ig.trend.map((item, i) => ({
@@ -154,6 +162,134 @@ export default function Summary() {
           </div>
         </div>
       </section>
+
+      {/* Top Posts Section */}
+      {topPosts.length > 0 && (
+        <section className="mb-6 md:mb-8">
+          <div className="rounded-xl border border-border bg-card p-4 md:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                注目投稿
+              </h3>
+              <div className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-base" style={{ color: '#E1306C' }}>
+                  photo_camera
+                </span>
+                <span className="text-xs text-muted-foreground">Instagram 今月のTOP3</span>
+              </div>
+            </div>
+
+            {/* Desktop: 3-column grid */}
+            <div className="hidden sm:grid sm:grid-cols-3 gap-4">
+              {topPosts.map((p, i) => {
+                const rankColors = ['#F9AB00', '#C0C0C0', '#CD7F32']
+                const typeColors: Record<string, string> = { FEED: '#E1306C', STORY: '#833AB4', REELS: '#F77737' }
+                const typeLabels: Record<string, string> = { FEED: 'フィード', STORY: 'ストーリー', REELS: 'リール' }
+                return (
+                  <div
+                    key={p.id}
+                    className="rounded-lg border border-border overflow-hidden transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
+                  >
+                    <div className="relative aspect-square bg-muted">
+                      {p.thumbnail_url ? (
+                        <img
+                          src={p.thumbnail_url}
+                          alt={p.caption.slice(0, 20)}
+                          className="size-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="size-full flex items-center justify-center text-4xl text-muted-foreground">
+                          {p.media_product_type === 'REELS' ? '🎬' : '🖼'}
+                        </div>
+                      )}
+                      <div
+                        className="absolute top-2 left-2 size-6 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-md"
+                        style={{ background: rankColors[i] }}
+                      >
+                        {i + 1}
+                      </div>
+                      <div
+                        className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[10px] font-semibold text-white"
+                        style={{ background: typeColors[p.media_product_type] || '#E1306C' }}
+                      >
+                        {typeLabels[p.media_product_type] || p.media_product_type}
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm text-foreground line-clamp-2 leading-snug mb-2">{p.caption}</p>
+                      <div className="grid grid-cols-3 gap-1 text-center">
+                        <div>
+                          <p className="text-xs font-bold" style={{ color: p.engRate >= 5 ? '#22c55e' : p.engRate >= 2.2 ? '#f59e0b' : '#E1306C' }}>
+                            {p.engRate.toFixed(1)}%
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">ENG率</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-foreground">{formatNumber(p.reach)}</p>
+                          <p className="text-[10px] text-muted-foreground">リーチ</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-foreground">{p.saved ?? 0}</p>
+                          <p className="text-[10px] text-muted-foreground">保存</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Mobile: vertical list */}
+            <div className="sm:hidden space-y-3">
+              {topPosts.map((p, i) => {
+                const rankColors = ['#F9AB00', '#C0C0C0', '#CD7F32']
+                const typeColors: Record<string, string> = { FEED: '#E1306C', STORY: '#833AB4', REELS: '#F77737' }
+                return (
+                  <div
+                    key={p.id}
+                    className="flex items-center gap-3 rounded-lg border border-border p-3"
+                  >
+                    <div
+                      className="shrink-0 size-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                      style={{ background: rankColors[i] }}
+                    >
+                      {i + 1}
+                    </div>
+                    <div className="shrink-0 size-16 rounded-lg overflow-hidden bg-muted">
+                      {p.thumbnail_url ? (
+                        <img src={p.thumbnail_url} alt="" className="size-full object-cover" loading="lazy" />
+                      ) : (
+                        <div className="size-full flex items-center justify-center text-2xl text-muted-foreground">🖼</div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <span
+                          className="text-[10px] font-medium px-1 py-0.5 rounded"
+                          style={{
+                            background: `${typeColors[p.media_product_type] || '#E1306C'}20`,
+                            color: typeColors[p.media_product_type] || '#E1306C',
+                          }}
+                        >
+                          {p.media_product_type}
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground truncate">{p.caption}</p>
+                      <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                        <span className="font-bold" style={{ color: p.engRate >= 5 ? '#22c55e' : '#f59e0b' }}>
+                          ENG {p.engRate.toFixed(1)}%
+                        </span>
+                        <span>リーチ {formatNumber(p.reach)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Alert Section */}
       {alerts.length > 0 && (

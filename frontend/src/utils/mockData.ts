@@ -39,14 +39,14 @@ export const mockInstagramInsights: InstagramInsight[] = months6.map((date, i) =
 }))
 
 const POST_TEMPLATES = [
-  { caption: '新メニュー登場！特製パスタ🍝', media_type: 'IMAGE' as const, media_product_type: 'FEED' as const },
-  { caption: 'シェフの一日に密着📹', media_type: 'VIDEO' as const, media_product_type: 'REELS' as const },
-  { caption: '週末限定ディナーコース🌟', media_type: 'CAROUSEL_ALBUM' as const, media_product_type: 'FEED' as const },
-  { caption: 'スタッフ紹介〜ホール担当です！', media_type: 'IMAGE' as const, media_product_type: 'FEED' as const },
-  { caption: '季節の特別デザート❤️', media_type: 'IMAGE' as const, media_product_type: 'STORY' as const },
-  { caption: 'ランチタイム営業中🍽️', media_type: 'IMAGE' as const, media_product_type: 'FEED' as const },
-  { caption: '厳選素材の仕入れレポート🥩', media_type: 'VIDEO' as const, media_product_type: 'REELS' as const },
-  { caption: 'お客様の笑顔が最高の報酬😊', media_type: 'CAROUSEL_ALBUM' as const, media_product_type: 'FEED' as const },
+  { caption: '新メニュー登場！特製パスタ🍝', media_type: 'IMAGE' as const, media_product_type: 'FEED' as const, imgSeed: 'pasta' },
+  { caption: 'シェフの一日に密着📹', media_type: 'VIDEO' as const, media_product_type: 'REELS' as const, imgSeed: 'chef' },
+  { caption: '週末限定ディナーコース🌟', media_type: 'CAROUSEL_ALBUM' as const, media_product_type: 'FEED' as const, imgSeed: 'dinner' },
+  { caption: 'スタッフ紹介〜ホール担当です！', media_type: 'IMAGE' as const, media_product_type: 'FEED' as const, imgSeed: 'restaurant-staff' },
+  { caption: '季節の特別デザート❤️', media_type: 'IMAGE' as const, media_product_type: 'STORY' as const, imgSeed: 'dessert' },
+  { caption: 'ランチタイム営業中🍽️', media_type: 'IMAGE' as const, media_product_type: 'FEED' as const, imgSeed: 'lunch' },
+  { caption: '厳選素材の仕入れレポート🥩', media_type: 'VIDEO' as const, media_product_type: 'REELS' as const, imgSeed: 'meat' },
+  { caption: 'お客様の笑顔が最高の報酬😊', media_type: 'CAROUSEL_ALBUM' as const, media_product_type: 'FEED' as const, imgSeed: 'cafe' },
 ]
 
 /** Generate Instagram posts for a specific month */
@@ -76,6 +76,7 @@ function generatePostsForMonth(month: string): InstagramPost[] {
       saved: Math.floor(rand() * 200),
       shares: Math.floor(rand() * 120),
       permalink: '#',
+      thumbnail_url: `https://picsum.photos/seed/${tmpl.imgSeed}${i}/400/400`,
     }
   }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 }

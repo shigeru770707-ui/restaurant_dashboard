@@ -20,6 +20,7 @@ export interface InstagramPost {
   saved: number
   shares: number
   permalink: string
+  thumbnail_url?: string
 }
 
 export interface InstagramSummary {

@@ -71,6 +71,7 @@ export async function fetchInstagramPosts(
     saved: Number(r.saved ?? 0),
     shares: Number(r.shares ?? 0),
     permalink: String(r.permalink ?? '#'),
+    thumbnail_url: String(r.thumbnail_url ?? r.media_url ?? ''),
   }))
 }
 

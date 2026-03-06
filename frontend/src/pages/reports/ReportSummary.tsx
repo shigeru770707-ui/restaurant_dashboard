@@ -169,12 +169,28 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
             <div className="space-y-1.5">
               {posts.map((p, i) => (
                 <div key={p.id} className="flex items-start gap-2 py-1 border-b border-gray-100 last:border-0">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style={{ background: i === 0 ? '#F9AB00' : i === 1 ? '#C0C0C0' : '#CD7F32' }}>
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white mt-0.5" style={{ background: i === 0 ? '#F9AB00' : i === 1 ? '#C0C0C0' : '#CD7F32' }}>
                     {i + 1}
                   </span>
+                  {p.thumbnail_url ? (
+                    <img
+                      src={p.thumbnail_url}
+                      alt=""
+                      crossOrigin="anonymous"
+                      className="flex-shrink-0 rounded object-cover mt-0.5"
+                      style={{ width: 36, height: 36 }}
+                    />
+                  ) : (
+                    <div
+                      className="flex-shrink-0 rounded bg-gray-100 flex items-center justify-center mt-0.5"
+                      style={{ width: 36, height: 36, fontSize: 16 }}
+                    >
+                      {p.media_product_type === 'REELS' ? '🎬' : '🖼'}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-gray-800 truncate">{p.caption}</p>
-                    <div className="flex gap-2 mt-0.5 text-[8px] text-gray-500">
+                    <p className="text-[10px] text-gray-800 truncate leading-tight">{p.caption}</p>
+                    <div className="flex flex-wrap gap-1.5 mt-0.5 text-[8px] text-gray-500">
                       <span className="px-1 py-0 rounded text-[7px] font-medium" style={{
                         background: p.media_product_type === 'REELS' ? '#833AB415' : p.media_product_type === 'STORY' ? '#00B90015' : '#4285F415',
                         color: p.media_product_type === 'REELS' ? '#833AB4' : p.media_product_type === 'STORY' ? '#00B900' : '#4285F4',

@@ -102,42 +102,66 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
         <div className="space-y-3">
           <div className="rounded-lg border border-gray-200 p-3">
             <h3 className="text-xs font-bold text-gray-700 mb-2">人気投稿 TOP5（ENG率順）</h3>
-            <table className="w-full text-[9px]">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-1 font-medium text-gray-500 w-5">#</th>
-                  <th className="text-left py-1 font-medium text-gray-500">タイプ</th>
-                  <th className="text-left py-1 font-medium text-gray-500">キャプション</th>
-                  <th className="text-right py-1 font-medium text-gray-500">リーチ</th>
-                  <th className="text-right py-1 font-medium text-gray-500">ENG率</th>
-                  <th className="text-right py-1 font-medium text-gray-500">保存</th>
-                </tr>
-              </thead>
-              <tbody>
-                {posts.map((p, i) => (
-                  <tr key={p.id} className="border-b border-gray-100">
-                    <td className="py-1">
-                      <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white inline-flex"
-                        style={{ background: i === 0 ? '#F9AB00' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#999' }}>
-                        {i + 1}
-                      </span>
-                    </td>
-                    <td className="py-1">
-                      <span className="px-1 py-0 rounded text-[7px] font-medium text-white" style={{ background: POST_TYPE_COLORS[p.media_product_type] || IG_PRIMARY }}>
-                        {p.media_product_type === 'FEED' ? 'フィード' : p.media_product_type === 'STORY' ? 'ストーリー' : 'リール'}
-                      </span>
-                    </td>
-                    <td className="py-1 text-gray-800 max-w-[200px] truncate">{p.caption}</td>
-                    <td className="py-1 text-right text-gray-600">{formatNumber(p.reach)}</td>
-                    <td className="py-1 text-right font-bold" style={{ color: p.engRate >= 5 ? '#34A853' : p.engRate >= 2.2 ? '#F9AB00' : '#EA4335' }}>
-                      {p.engRate.toFixed(1)}%
-                    </td>
-                    <td className="py-1 text-right text-gray-600">{p.saved ?? 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="mt-2 text-[8px] text-gray-400">※ ENG率 = (いいね+コメント+保存+シェア) / リーチ × 100</p>
+            <div className="space-y-2">
+              {posts.map((p, i) => {
+                const maxEng = posts[0]?.engRate ?? 1
+                const barWidth = Math.round((p.engRate / maxEng) * 100)
+                return (
+                  <div key={p.id} className="flex items-start gap-2 pb-2 border-b border-gray-100 last:border-0">
+                    <span
+                      className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white mt-0.5"
+                      style={{ background: i === 0 ? '#F9AB00' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#999' }}
+                    >
+                      {i + 1}
+                    </span>
+                    {p.thumbnail_url ? (
+                      <img
+                        src={p.thumbnail_url}
+                        alt=""
+                        crossOrigin="anonymous"
+                        className="flex-shrink-0 rounded object-cover"
+                        style={{ width: 48, height: 48 }}
+                      />
+                    ) : (
+                      <div
+                        className="flex-shrink-0 rounded bg-gray-100 flex items-center justify-center"
+                        style={{ width: 48, height: 48, fontSize: 18 }}
+                      >
+                        {p.media_product_type === 'REELS' ? '🎬' : p.media_product_type === 'STORY' ? '📱' : '🖼'}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <span
+                          className="px-1 py-0 rounded text-[7px] font-medium text-white flex-shrink-0"
+                          style={{ background: POST_TYPE_COLORS[p.media_product_type] || IG_PRIMARY }}
+                        >
+                          {p.media_product_type === 'FEED' ? 'フィード' : p.media_product_type === 'STORY' ? 'ストーリー' : 'リール'}
+                        </span>
+                        <span className="text-[9px] text-gray-800 truncate">{p.caption}</span>
+                      </div>
+                      <div className="flex gap-3 text-[8px] text-gray-500 mb-1">
+                        <span>リーチ {formatNumber(p.reach)}</span>
+                        <span className="font-bold" style={{ color: p.engRate >= 5 ? '#34A853' : p.engRate >= 2.2 ? '#F9AB00' : '#EA4335' }}>
+                          ENG {p.engRate.toFixed(1)}%
+                        </span>
+                        <span>保存 {p.saved ?? 0}</span>
+                      </div>
+                      <div className="w-full h-1 bg-gray-100 rounded overflow-hidden">
+                        <div
+                          className="h-full rounded"
+                          style={{
+                            width: `${barWidth}%`,
+                            background: p.engRate >= 5 ? '#34A853' : p.engRate >= 2.2 ? '#F9AB00' : '#EA4335',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="mt-1.5 text-[8px] text-gray-400">※ ENG率 = (いいね+コメント+保存+シェア) / リーチ × 100</p>
           </div>
 
           {/* Post Type Breakdown */}

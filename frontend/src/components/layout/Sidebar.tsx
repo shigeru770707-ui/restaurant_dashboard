@@ -6,6 +6,7 @@ import { InstagramIcon, LineIcon, GA4Icon, GBPIcon } from '@/components/common/B
 interface NavItem {
   path: string
   label: string
+  mobileLabel?: string
   icon?: string
   brandIcon?: (size: number) => ReactNode
   color: string
@@ -14,7 +15,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { path: '/', label: 'サマリー', icon: 'chart_data', color: '#6366F1', lightBg: '#EEF2FF' },
-  { path: '/instagram', label: 'Instagram', brandIcon: (s) => <InstagramIcon size={s} />, color: '#E1306C', lightBg: '#FCE7EF' },
+  { path: '/instagram', label: 'Instagram', mobileLabel: 'Insta', brandIcon: (s) => <InstagramIcon size={s} />, color: '#E1306C', lightBg: '#FCE7EF' },
   { path: '/line', label: 'LINE', brandIcon: (s) => <LineIcon size={s} />, color: '#00B900', lightBg: '#E6F9E6' },
   { path: '/ga4', label: 'GA4', brandIcon: (s) => <GA4Icon size={s} />, color: '#4285F4', lightBg: '#EBF2FF' },
   { path: '/gbp', label: 'GBP', brandIcon: (s) => <GBPIcon size={s} />, color: '#EA4335', lightBg: '#FDECE9' },
@@ -156,49 +157,56 @@ export default function Sidebar() {
       </aside>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex flex-col border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
-        <div className="flex">
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end={item.path === '/'}
-            className={({ isActive }) =>
-              `flex flex-1 flex-col items-center justify-center min-h-[48px] py-1.5 transition-colors duration-150 ${
-                isActive
-                  ? 'font-semibold'
-                  : 'text-muted-foreground'
-              }`
-            }
-            style={({ isActive }) =>
-              isActive ? { color: item.color } : undefined
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {item.brandIcon ? (
-                  <span className="flex-shrink-0">{item.brandIcon(22)}</span>
-                ) : (
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-sm md:hidden">
+        <div className="pb-[env(safe-area-inset-bottom)]">
+          <div className="flex">
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
+              className={({ isActive }) =>
+                `flex flex-1 flex-col items-center justify-center gap-0.5 min-h-[52px] py-1.5 transition-colors duration-150 ${
+                  isActive
+                    ? 'font-semibold'
+                    : 'text-muted-foreground/60'
+                }`
+              }
+              style={({ isActive }) =>
+                isActive ? { color: item.color } : undefined
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {item.brandIcon ? (
+                    <span className="flex-shrink-0">{item.brandIcon(isActive ? 22 : 20)}</span>
+                  ) : (
+                    <span
+                      className={`material-symbols-outlined ${isActive ? 'text-[22px]' : 'text-[20px]'}`}
+                      style={isActive ? { color: item.color } : undefined}
+                    >
+                      {item.icon}
+                    </span>
+                  )}
                   <span
-                    className="material-symbols-outlined text-[22px]"
+                    className={`leading-none tracking-tight ${
+                      isActive
+                        ? 'text-[10px] font-semibold'
+                        : 'text-[9px] font-medium text-muted-foreground/50'
+                    }`}
                     style={isActive ? { color: item.color } : undefined}
                   >
-                    {item.icon}
+                    {item.mobileLabel || item.label}
                   </span>
-                )}
-                {isActive && (
-                  <span className="text-[10px] mt-0.5 leading-tight" style={{ color: item.color }}>
-                    {item.label}
-                  </span>
-                )}
-              </>
-            )}
-          </NavLink>
-        ))}
+                </>
+              )}
+            </NavLink>
+          ))}
+          </div>
+          <p className="text-[8px] text-center text-muted-foreground/30 pb-0.5 select-none">
+            &copy; 2026 GNS inc.
+          </p>
         </div>
-        <p className="text-[10px] text-center text-muted-foreground/40 pb-1 select-none leading-none">
-          &copy; 2026 GNS inc.
-        </p>
       </nav>
     </>
   )
