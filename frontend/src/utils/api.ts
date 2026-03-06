@@ -58,21 +58,25 @@ export async function fetchInstagramPosts(
   const raw = await fetchJson<Record<string, unknown>[]>(
     `${BASE}/instagram/posts?${params}`,
   )
-  return raw.map((r) => ({
-    id: String(r.post_id ?? r.id ?? ''),
-    caption: String(r.caption ?? ''),
-    media_type: (r.media_type as InstagramPost['media_type']) ?? 'IMAGE',
-    media_product_type: (r.media_product_type as InstagramPost['media_product_type']) ?? 'FEED',
-    timestamp: String(r.timestamp ?? ''),
-    like_count: Number(r.likes ?? r.like_count ?? 0),
-    comments_count: Number(r.comments ?? r.comments_count ?? 0),
-    reach: Number(r.reach ?? 0),
-    impressions: Number(r.impressions ?? 0),
-    saved: Number(r.saved ?? 0),
-    shares: Number(r.shares ?? 0),
-    permalink: String(r.permalink ?? '#'),
-    thumbnail_url: String(r.thumbnail_url ?? r.media_url ?? ''),
-  }))
+  return raw.map((r) => {
+    const id = String(r.post_id ?? r.id ?? '')
+    const rawThumb = r.thumbnail_url ?? r.media_url
+    return {
+      id,
+      caption: String(r.caption ?? ''),
+      media_type: (r.media_type as InstagramPost['media_type']) ?? 'IMAGE',
+      media_product_type: (r.media_product_type as InstagramPost['media_product_type']) ?? 'FEED',
+      timestamp: String(r.timestamp ?? ''),
+      like_count: Number(r.likes ?? r.like_count ?? 0),
+      comments_count: Number(r.comments ?? r.comments_count ?? 0),
+      reach: Number(r.reach ?? 0),
+      impressions: Number(r.impressions ?? 0),
+      saved: Number(r.saved ?? 0),
+      shares: Number(r.shares ?? 0),
+      permalink: String(r.permalink ?? '#'),
+      thumbnail_url: rawThumb ? String(rawThumb) : `https://picsum.photos/seed/${encodeURIComponent(id || 'post')}/400/400`,
+    }
+  })
 }
 
 // ---------- LINE ----------
