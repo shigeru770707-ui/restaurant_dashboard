@@ -1,5 +1,5 @@
 import {
-  BarChart, Bar, PieChart, Pie, Cell,
+  BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
 import { useDashboardData } from '@/hooks/useDashboardData'
@@ -60,6 +60,33 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
     }
   })
 
+  // Sparkline trend data
+  const sparkData = ig.trend.map((item, i) => ({
+    month: item.date.slice(5),
+    ig: item.reach,
+    line: ln.trend[i]?.followers ?? 0,
+    ga4: ga.trend[i]?.sessions ?? 0,
+    gbp: (gb.trend[i]?.views_maps ?? 0) + (gb.trend[i]?.views_search ?? 0),
+  }))
+
+  // LINE message stats
+  const lineMessages = ln.messages
+  const lineTotalDelivered = lineMessages.reduce((s, m) => s + m.delivered, 0)
+  const lineTotalImpressions = lineMessages.reduce((s, m) => s + m.unique_impressions, 0)
+  const lineTotalClicks = lineMessages.reduce((s, m) => s + m.unique_clicks, 0)
+  const lineAvgOpenRate = lineTotalDelivered > 0 ? (lineTotalImpressions / lineTotalDelivered) * 100 : 0
+  const lineAvgClickRate = lineTotalImpressions > 0 ? (lineTotalClicks / lineTotalImpressions) * 100 : 0
+
+  // Traffic sources (top 5)
+  const trafficSources = ga.trafficSources.slice().sort((a, b) => b.sessions - a.sessions).slice(0, 5)
+  const maxTrafficSessions = Math.max(...trafficSources.map(t => t.sessions))
+
+  // Top pages
+  const topPages = ga.pages.slice().sort((a, b) => b.page_views - a.page_views).slice(0, 5)
+
+  // CVR for action items
+  const cvr = ga.current.sessions > 0 ? (ga.current.conversions / ga.current.sessions) * 100 : 0
+
   const diff = (curr: number, prev: number) => {
     if (!prev) return ''
     const pct = ((curr - prev) / prev) * 100
@@ -106,8 +133,39 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
         ))}
       </div>
 
+      {/* Mini Trend Sparklines */}
+      <div className="grid grid-cols-4 gap-2 mb-3">
+        {[
+          { label: 'IG リーチ推移', dataKey: 'ig', color: '#E1306C' },
+          { label: 'LINE 友だち推移', dataKey: 'line', color: '#00B900' },
+          { label: 'GA4 セッション推移', dataKey: 'ga4', color: '#4285F4' },
+          { label: 'GBP 表示回数推移', dataKey: 'gbp', color: '#EA4335' },
+        ].map((spark) => (
+          <div key={spark.dataKey} className="rounded-lg border border-gray-200 px-2 py-1.5">
+            <p className="text-[8px] text-gray-500 mb-0.5">{spark.label}</p>
+            <div style={{ height: 32 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={sparkData} margin={{ left: 0, right: 0, top: 2, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id={`spark-${spark.dataKey}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={spark.color} stopOpacity={0.3} />
+                      <stop offset="100%" stopColor={spark.color} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area type="monotone" dataKey={spark.dataKey} stroke={spark.color} fill={`url(#spark-${spark.dataKey})`} strokeWidth={1.5} dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex justify-between text-[7px] text-gray-400 mt-0.5">
+              <span>{sparkData[0]?.month}</span>
+              <span>{sparkData[sparkData.length - 1]?.month}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Main Grid */}
-      <div className="grid grid-cols-3 gap-4" style={{ fontSize: 11 }}>
+      <div className="grid grid-cols-3 gap-3" style={{ fontSize: 11 }}>
         {/* Column 1: Fan Base */}
         <div className="space-y-3">
           <div className="rounded-lg border border-gray-200 p-3">
@@ -157,6 +215,37 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
                 <span key={i} className="px-1.5 py-0.5 rounded bg-gray-100 text-[8px]">{d.label} {d.percentage}%</span>
               ))}
             </div>
+          </div>
+
+          {/* WHERE - Traffic Sources + Pages */}
+          <div className="rounded-lg border border-gray-200 p-3">
+            <h3 className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
+              <span style={{ color: '#4285F4' }}>WHERE</span> - 流入経路 & 人気ページ
+            </h3>
+            <p className="text-[9px] text-gray-500 mb-1">流入経路 TOP5（GA4）</p>
+            <div className="space-y-1 mb-2">
+              {trafficSources.map((t, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <div className="w-20 text-[9px] text-gray-600 truncate">{t.channel}</div>
+                  <div className="flex-1 h-2.5 bg-gray-100 rounded overflow-hidden">
+                    <div className="h-full rounded" style={{ width: `${maxTrafficSessions > 0 ? (t.sessions / maxTrafficSessions) * 100 : 0}%`, background: '#4285F4', opacity: 1 - i * 0.15 }} />
+                  </div>
+                  <div className="w-10 text-[8px] text-gray-500 text-right">{formatNumber(t.sessions)}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[9px] text-gray-500 mb-1">人気ページ TOP5</p>
+            <table className="w-full text-[8px]">
+              <tbody>
+                {topPages.map((p, i) => (
+                  <tr key={i} className="border-b border-gray-50">
+                    <td className="py-0.5 text-gray-600 truncate" style={{ maxWidth: 80 }}>{p.page_title}</td>
+                    <td className="py-0.5 text-right text-gray-500">{formatNumber(p.page_views)}<span className="text-gray-400"> PV</span></td>
+                    <td className="py-0.5 text-right text-gray-500 pl-2">{p.avg_time_on_page.toFixed(0)}<span className="text-gray-400">秒</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -250,6 +339,47 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
               <span>推奨: 平日11-13時, 週末17-20時</span>
             </div>
           </div>
+
+          {/* LINE Message Performance */}
+          <div className="rounded-lg border border-gray-200 p-3">
+            <h3 className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
+              <span style={{ color: '#00B900' }}>PUSH</span> - LINE配信実績
+            </h3>
+            <div className="grid grid-cols-3 gap-1.5 text-center mb-2">
+              <div className="rounded bg-gray-50 py-1.5">
+                <p className="text-sm font-bold text-gray-900">{lineMessages.length}</p>
+                <p className="text-[8px] text-gray-500">配信回数</p>
+              </div>
+              <div className="rounded bg-gray-50 py-1.5">
+                <p className="text-sm font-bold" style={{ color: lineAvgOpenRate >= 60 ? '#34A853' : '#F9AB00' }}>{lineAvgOpenRate.toFixed(1)}%</p>
+                <p className="text-[8px] text-gray-500">開封率</p>
+              </div>
+              <div className="rounded bg-gray-50 py-1.5">
+                <p className="text-sm font-bold" style={{ color: lineAvgClickRate >= 8 ? '#34A853' : '#F9AB00' }}>{lineAvgClickRate.toFixed(1)}%</p>
+                <p className="text-[8px] text-gray-500">クリック率</p>
+              </div>
+            </div>
+            <table className="w-full text-[8px]">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-0.5 font-medium text-gray-500">配信日</th>
+                  <th className="text-right py-0.5 font-medium text-gray-500">配信数</th>
+                  <th className="text-right py-0.5 font-medium text-gray-500">開封</th>
+                  <th className="text-right py-0.5 font-medium text-gray-500">クリック</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lineMessages.slice(0, 4).map((m, i) => (
+                  <tr key={i} className="border-b border-gray-50">
+                    <td className="py-0.5 text-gray-600">{m.date.slice(5)}</td>
+                    <td className="py-0.5 text-right text-gray-600">{formatNumber(m.delivered)}</td>
+                    <td className="py-0.5 text-right text-gray-600">{formatNumber(m.unique_impressions)}</td>
+                    <td className="py-0.5 text-right text-gray-600">{formatNumber(m.unique_clicks)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Column 3: Reviews + Store Comparison */}
@@ -288,6 +418,30 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
                 <p className="text-gray-500">業界平均4.6比</p>
               </div>
             </div>
+            {/* Recent Reviews */}
+            {gb.reviews.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-gray-100">
+                <p className="text-[9px] text-gray-500 mb-1.5">最新の声</p>
+                <div className="space-y-1.5">
+                  {gb.reviews.slice(0, 3).map((review, i) => {
+                    const borderColors: Record<number, string> = { 5: '#34A853', 4: '#4285F4', 3: '#F9AB00', 2: '#EA4335', 1: '#D93025' }
+                    return (
+                      <div
+                        key={i}
+                        className="rounded bg-gray-50 p-1.5"
+                        style={{ borderLeft: `2px solid ${borderColors[review.rating] || '#999'}` }}
+                      >
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[8px]"><StarText rating={review.rating} /></span>
+                          <span className="text-[7px] text-gray-400">{review.author} / {review.date.slice(0, 10)}</span>
+                        </div>
+                        <p className="text-[8px] text-gray-600 leading-tight" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{review.text}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="rounded-lg border border-gray-200 p-3">
@@ -319,11 +473,13 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
           </div>
 
           <div className="rounded-lg border-2 border-indigo-200 bg-indigo-50 p-3">
-            <h3 className="text-xs font-bold text-indigo-700 mb-2">今月のアクション</h3>
-            <ol className="space-y-1 text-[10px] text-gray-700 list-decimal list-inside">
+            <h3 className="text-xs font-bold text-indigo-700 mb-1.5">今月のアクション</h3>
+            <ol className="space-y-0.5 text-[9px] text-gray-700 list-decimal list-inside">
               <li>{posts[0] ? `「${posts[0].caption.slice(0, 15)}...」が高ENG → 類似コンテンツを強化` : 'ENG率の高い投稿タイプを分析'}</li>
               <li>{blockRate > 10 ? 'LINE配信頻度の見直し（ブロック率要注意）' : 'LINE友だち獲得施策の継続'}</li>
               <li>{gbpAvgRating < 4.6 ? '口コミ返信を強化し評価改善を目指す' : '高評価維持 - スタッフへの共有・称賛'}</li>
+              <li>{ga.current.bounce_rate > 50 ? `直帰率${ga.current.bounce_rate.toFixed(0)}% → LP改善でCV導線を最適化` : `CVR ${cvr.toFixed(1)}%を維持 → 予約ページのA/Bテスト検討`}</li>
+              <li>{trafficSources[0] ? `主要流入「${trafficSources[0].channel}」→ ${trafficSources[0].channel.includes('Social') ? 'SNS連携を更に強化' : 'SEO施策の継続と拡充'}` : '流入チャネルの多角化を検討'}</li>
             </ol>
           </div>
         </div>

@@ -2,6 +2,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, Legend,
   ResponsiveContainer, CartesianGrid,
 } from 'recharts'
+import { Link } from 'react-router-dom'
 import Header from '@/components/layout/Header'
 import KpiCard from '@/components/common/KpiCard'
 import { useMonth } from '@/hooks/useMonth'
@@ -34,6 +35,12 @@ export default function Summary() {
 
   const igEngRate = ig.current.reach > 0 ? (ig.current.impressions / ig.current.reach) * 10 : 0
   const prevIgEngRate = ig.previous.reach > 0 ? (ig.previous.impressions / ig.previous.reach) * 10 : 0
+
+  const gbpAvgRating = gb.reviews.length > 0
+    ? gb.reviews.reduce((s, r) => s + r.rating, 0) / gb.reviews.length
+    : 0
+  const gbpTotalRatings = gb.ratingDistribution.reduce((s, r) => s + r.count, 0)
+  const gbpReplyRate = 68
 
   const topPosts = ig.posts
     .map((p) => {
@@ -100,6 +107,7 @@ export default function Summary() {
             title="Instagram"
             icon="photo_camera"
             color="#E1306C"
+            href="/instagram"
             metrics={[
               { label: 'フォロワー', value: formatNumber(ig.current.followers_count) },
               { label: 'リーチ', value: formatNumber(ig.current.reach) },
@@ -110,6 +118,7 @@ export default function Summary() {
             title="LINE"
             icon="chat"
             color="#00B900"
+            href="/line"
             metrics={[
               { label: '友だち数', value: formatNumber(ln.current.followers) },
               { label: '開封率', value: formatPercent(70.5) },
@@ -120,6 +129,7 @@ export default function Summary() {
             title="GA4"
             icon="monitoring"
             color="#4285F4"
+            href="/ga4"
             metrics={[
               { label: 'セッション数', value: formatNumber(ga.current.sessions) },
               { label: 'CV数', value: formatNumber(ga.current.conversions) },
@@ -130,6 +140,7 @@ export default function Summary() {
             title="GBP"
             icon="location_on"
             color="#EA4335"
+            href="/gbp"
             metrics={[
               { label: '検索表示', value: formatNumber(gb.current.views_search + gb.current.views_maps) },
               { label: 'アクション数', value: formatNumber(gb.current.actions_website + gb.current.actions_phone + gb.current.actions_directions) },
@@ -291,6 +302,104 @@ export default function Summary() {
         </section>
       )}
 
+      {/* GBP Reviews Section */}
+      <section className="mb-6 md:mb-8">
+        <div className="rounded-xl border border-border bg-card p-4 md:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              口コミサマリー
+            </h3>
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-base" style={{ color: '#EA4335' }}>
+                reviews
+              </span>
+              <span className="text-xs text-muted-foreground">Google ビジネスプロフィール</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Left: Rating Summary */}
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-foreground">{gbpAvgRating.toFixed(1)}</p>
+                  <div className="text-sm" style={{ color: '#F9AB00' }}>
+                    {'★'.repeat(Math.round(gbpAvgRating))}{'☆'.repeat(5 - Math.round(gbpAvgRating))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{gbpTotalRatings}件の評価</p>
+                </div>
+                <div className="flex-1 space-y-1">
+                  {gb.ratingDistribution.slice().sort((a, b) => b.rating - a.rating).map((r) => {
+                    const maxCount = Math.max(...gb.ratingDistribution.map(d => d.count))
+                    const barWidth = maxCount > 0 ? (r.count / maxCount) * 100 : 0
+                    const ratingColors: Record<number, string> = { 5: '#34A853', 4: '#4285F4', 3: '#F9AB00', 2: '#EA4335', 1: '#D93025' }
+                    return (
+                      <div key={r.rating} className="flex items-center gap-1.5">
+                        <span className="text-xs text-muted-foreground w-5 text-right">{r.rating}★</span>
+                        <div className="flex-1 h-2 bg-muted rounded overflow-hidden">
+                          <div
+                            className="h-full rounded transition-all"
+                            style={{ width: `${barWidth}%`, background: ratingColors[r.rating] || '#999' }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground w-6 text-right">{r.count}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1 rounded-lg bg-muted/50 p-2 text-center">
+                  <p className="text-sm font-bold" style={{ color: gbpReplyRate >= 73 ? '#34A853' : '#F9AB00' }}>{gbpReplyRate}%</p>
+                  <p className="text-[10px] text-muted-foreground">返信率</p>
+                </div>
+                <div className="flex-1 rounded-lg bg-muted/50 p-2 text-center">
+                  <p className="text-sm font-bold" style={{ color: gbpAvgRating >= 4.6 ? '#34A853' : '#F9AB00' }}>
+                    {gbpAvgRating >= 4.6 ? '良好' : '要改善'}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">業界平均4.6比</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Recent Review Cards */}
+            <div className="space-y-2">
+              {gb.reviews.slice(0, 3).map((review, i) => {
+                const borderColors: Record<number, string> = { 5: '#34A853', 4: '#4285F4', 3: '#F9AB00', 2: '#EA4335', 1: '#D93025' }
+                return (
+                  <div
+                    key={i}
+                    className="rounded-lg border border-border p-3"
+                    style={{ borderLeft: `3px solid ${borderColors[review.rating] || '#999'}` }}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs" style={{ color: '#F9AB00' }}>
+                          {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                        </span>
+                        <span className="text-xs font-medium text-foreground">{review.author}</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">{review.date.slice(0, 10)}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{review.text}</p>
+                  </div>
+                )
+              })}
+              {gb.reviews.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4">口コミデータがありません</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-3 pt-2 border-t border-border flex justify-end">
+            <a href="/gbp" className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              GBP詳細を見る
+              <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* Alert Section */}
       {alerts.length > 0 && (
         <section>
@@ -325,22 +434,26 @@ function MediaScoreCard({
   title,
   icon,
   color,
+  href,
   metrics,
 }: {
   title: string
   icon: string
   color: string
+  href: string
   metrics: { label: string; value: string }[]
 }) {
   return (
-    <div
-      className="rounded-xl border border-border bg-card p-3 sm:p-5 relative overflow-hidden transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
+    <Link
+      to={href}
+      className="block rounded-xl border border-border bg-card p-3 sm:p-5 relative overflow-hidden transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] cursor-pointer no-underline"
       style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)' }}
     >
       <div className="absolute top-0 left-0 w-full h-[3px]" style={{ background: color }} />
       <div className="flex items-center gap-2 mb-3">
         <span className="material-symbols-outlined text-lg" style={{ color }}>{icon}</span>
         <span className="text-sm font-semibold text-foreground">{title}</span>
+        <span className="material-symbols-outlined text-sm text-muted-foreground ml-auto">arrow_forward</span>
       </div>
       <div className="space-y-2">
         {metrics.map((m) => (
@@ -350,7 +463,7 @@ function MediaScoreCard({
           </div>
         ))}
       </div>
-    </div>
+    </Link>
   )
 }
 
