@@ -1,13 +1,34 @@
 services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    expose:
+      - "8000"
+    volumes:
+      - dashboard_data:/app/data
+    environment:
+      - DB_PATH=/app/data/dashboard.db
+
   dashboard:
     build: .
     ports:
       - "8501:8501"
     volumes:
-      # DBを永続化（コンテナ再起動でもデータ保持）
-      - dashboard_data:/app
+      - dashboard_data:/app/data
+      - ./.streamlit/secrets.toml:/app/.streamlit/secrets.toml:ro
     environment:
       - STREAMLIT_SERVER_HEADLESS=true
+      - DB_PATH=/app/data/dashboard.db
 
 volumes:
   dashboard_data:

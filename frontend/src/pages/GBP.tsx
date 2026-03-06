@@ -22,7 +22,7 @@ import StoreSelector from '@/components/common/StoreSelector'
 import { useMonth } from '@/hooks/useMonth'
 import { useStore } from '@/hooks/useStore'
 import { useApiSettings } from '@/hooks/useApiSettings'
-import { getMockDataForMonth } from '@/utils/mockData'
+import { useDashboardData } from '@/hooks/useDashboardData'
 import { formatNumber, formatPercent } from '@/utils/format'
 
 const TOOLTIP_STYLE = {
@@ -77,7 +77,8 @@ export default function GBP() {
   const { gbpStoreIndex, setGbpStoreIndex } = useStore()
   const { settings } = useApiSettings()
   const [reviewPageSize, setReviewPageSize] = useState(5)
-  const data = getMockDataForMonth(selectedMonth, gbpStoreIndex).gbp
+  const { data: allData } = useDashboardData(selectedMonth, gbpStoreIndex)
+  const data = allData.gbp
 
   const current = data.current
   const previous = data.previous

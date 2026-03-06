@@ -1,12 +1,13 @@
 """SQLite データベース スキーマ定義・CRUD操作."""
 
+import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
 import pandas as pd
 
-DB_PATH = Path(__file__).parent.parent / "dashboard.db"
+DB_PATH = Path(os.environ.get("DB_PATH", Path(__file__).parent.parent / "dashboard.db"))
 
 
 @contextmanager

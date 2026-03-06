@@ -2,6 +2,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
+import { useDashboardData } from '@/hooks/useDashboardData'
 import { getMockDataForMonth } from '@/utils/mockData'
 import { formatNumber, formatPercent } from '@/utils/format'
 
@@ -21,7 +22,7 @@ export interface ReportProps {
 }
 
 export default function ReportSummary({ selectedMonth, storeIndex, storeName, generatedDate, storeNames }: ReportProps) {
-  const data = getMockDataForMonth(selectedMonth, storeIndex)
+  const { data } = useDashboardData(selectedMonth, storeIndex)
   const ig = data.instagram
   const ln = data.line
   const ga = data.ga4

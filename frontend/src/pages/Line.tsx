@@ -24,7 +24,8 @@ import TrendBadge from '@/components/common/TrendBadge'
 import PageSizeSelector from '@/components/common/PageSizeSelector'
 import { useMonth } from '@/hooks/useMonth'
 import { usePeriod } from '@/hooks/usePeriod'
-import { getMockDataForMonth, filterByDateRange } from '@/utils/mockData'
+import { useDashboardData } from '@/hooks/useDashboardData'
+import { filterByDateRange } from '@/utils/mockData'
 import { formatNumber, formatPercent } from '@/utils/format'
 
 const LINE_GREEN = '#00B900'
@@ -55,7 +56,8 @@ const DEMO_COLORS = ['#00B900', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6']
 export default function Line() {
   const { selectedMonth } = useMonth()
   const { periodType, effectiveStart, effectiveEnd } = usePeriod()
-  const data = getMockDataForMonth(selectedMonth).line
+  const { data: allData } = useDashboardData(selectedMonth)
+  const data = allData.line
 
   const current = data.current
   const previous = data.previous

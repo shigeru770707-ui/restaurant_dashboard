@@ -25,7 +25,8 @@ import { useMonth } from '@/hooks/useMonth'
 import { usePeriod } from '@/hooks/usePeriod'
 import { useStore } from '@/hooks/useStore'
 import { useApiSettings } from '@/hooks/useApiSettings'
-import { getMockDataForMonth, filterByDateRange } from '@/utils/mockData'
+import { useDashboardData } from '@/hooks/useDashboardData'
+import { filterByDateRange } from '@/utils/mockData'
 import { formatNumber, formatPercent } from '@/utils/format'
 
 const IG_PRIMARY = '#E1306C'
@@ -80,7 +81,8 @@ export default function Instagram() {
   const { periodType, effectiveStart, effectiveEnd } = usePeriod()
   const { igStoreIndex, setIgStoreIndex } = useStore()
   const { settings } = useApiSettings()
-  const data = getMockDataForMonth(selectedMonth, igStoreIndex).instagram
+  const { data: allData } = useDashboardData(selectedMonth, igStoreIndex)
+  const data = allData.instagram
 
   const current = data.current
   const previous = data.previous

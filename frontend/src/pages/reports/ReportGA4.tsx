@@ -2,7 +2,7 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts'
-import { getMockDataForMonth } from '@/utils/mockData'
+import { useDashboardData } from '@/hooks/useDashboardData'
 import { formatNumber, formatPercent } from '@/utils/format'
 import type { ReportProps } from './ReportSummary'
 
@@ -12,7 +12,8 @@ const DEVICE_COLORS = ['#4285F4', '#34A853', '#F9AB00']
 const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
 
 export default function ReportGA4({ selectedMonth, storeIndex, storeName, generatedDate }: ReportProps) {
-  const data = getMockDataForMonth(selectedMonth, storeIndex).ga4
+  const { data: allData } = useDashboardData(selectedMonth, storeIndex)
+  const data = allData.ga4
   const current = data.current
   const previous = data.previous
   const trend = data.trend

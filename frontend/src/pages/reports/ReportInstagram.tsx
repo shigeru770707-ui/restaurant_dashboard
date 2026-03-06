@@ -2,7 +2,7 @@ import {
   AreaChart, Area, BarChart, Bar, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
-import { getMockDataForMonth } from '@/utils/mockData'
+import { useDashboardData } from '@/hooks/useDashboardData'
 import { formatNumber, formatPercent } from '@/utils/format'
 import type { ReportProps } from './ReportSummary'
 
@@ -12,7 +12,8 @@ const IG_TERTIARY = '#F77737'
 const POST_TYPE_COLORS: Record<string, string> = { FEED: IG_PRIMARY, STORY: IG_SECONDARY, REELS: IG_TERTIARY }
 
 export default function ReportInstagram({ selectedMonth, storeIndex, storeName, generatedDate }: ReportProps) {
-  const data = getMockDataForMonth(selectedMonth, storeIndex).instagram
+  const { data: allData } = useDashboardData(selectedMonth, storeIndex)
+  const data = allData.instagram
   const current = data.current
   const previous = data.previous
   const trend = data.trend

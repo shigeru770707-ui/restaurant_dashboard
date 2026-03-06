@@ -2,7 +2,7 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts'
-import { getMockDataForMonth } from '@/utils/mockData'
+import { useDashboardData } from '@/hooks/useDashboardData'
 import { formatNumber, formatPercent } from '@/utils/format'
 import type { ReportProps } from './ReportSummary'
 
@@ -10,7 +10,8 @@ const LINE_GREEN = '#00B900'
 const DEMO_COLORS = ['#00B900', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6']
 
 export default function ReportLine({ selectedMonth, storeIndex, storeName, generatedDate }: ReportProps) {
-  const data = getMockDataForMonth(selectedMonth, storeIndex).line
+  const { data: allData } = useDashboardData(selectedMonth, storeIndex)
+  const data = allData.line
   const current = data.current
   const previous = data.previous
   const trend = data.trend

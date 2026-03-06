@@ -2,6 +2,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
   XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
+import { useDashboardData } from '@/hooks/useDashboardData'
 import { getMockDataForMonth } from '@/utils/mockData'
 import { formatNumber, formatPercent } from '@/utils/format'
 import type { ReportProps } from './ReportSummary'
@@ -14,7 +15,8 @@ function StarText({ rating }: { rating: number }) {
 }
 
 export default function ReportGBP({ selectedMonth, storeIndex, storeName, generatedDate, storeNames }: ReportProps) {
-  const data = getMockDataForMonth(selectedMonth, storeIndex).gbp
+  const { data: allData } = useDashboardData(selectedMonth, storeIndex)
+  const data = allData.gbp
   const current = data.current
   const previous = data.previous
   const trend = data.trend

@@ -21,7 +21,7 @@ import Header from '@/components/layout/Header'
 import { GA4Icon } from '@/components/common/BrandIcons'
 import KpiCard from '@/components/common/KpiCard'
 import { useMonth } from '@/hooks/useMonth'
-import { getMockDataForMonth } from '@/utils/mockData'
+import { useDashboardData } from '@/hooks/useDashboardData'
 import { formatNumber, formatPercent } from '@/utils/format'
 import PageSizeSelector from '@/components/common/PageSizeSelector'
 
@@ -50,7 +50,8 @@ const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
 export default function GA4() {
   const { selectedMonth } = useMonth()
   const [pageRankSize, setPageRankSize] = useState(5)
-  const data = getMockDataForMonth(selectedMonth).ga4
+  const { data: allData } = useDashboardData(selectedMonth)
+  const data = allData.ga4
 
   const current = data.current
   const previous = data.previous

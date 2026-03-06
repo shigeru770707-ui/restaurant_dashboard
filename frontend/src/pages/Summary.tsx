@@ -5,7 +5,7 @@ import {
 import Header from '@/components/layout/Header'
 import KpiCard from '@/components/common/KpiCard'
 import { useMonth } from '@/hooks/useMonth'
-import { getMockDataForMonth } from '@/utils/mockData'
+import { useDashboardData } from '@/hooks/useDashboardData'
 import { formatNumber, formatPercent } from '@/utils/format'
 
 const TOOLTIP_STYLE = {
@@ -22,7 +22,7 @@ const TICK_COLOR = 'var(--muted-foreground)'
 
 export default function Summary() {
   const { selectedMonth } = useMonth()
-  const data = getMockDataForMonth(selectedMonth)
+  const { data } = useDashboardData(selectedMonth)
 
   const ig = data.instagram
   const ln = data.line
@@ -218,7 +218,7 @@ function MediaScoreCard({
   )
 }
 
-function getAlerts(data: ReturnType<typeof getMockDataForMonth>) {
+function getAlerts(data: { instagram: { current: { reach: number; followers_count: number; impressions: number }; previous: { reach: number; followers_count: number; impressions: number } }; line: { current: { followers: number }; previous: { followers: number } }; ga4: { current: { sessions: number; conversions: number }; previous: { sessions: number; conversions: number } }; gbp: { current: { views_maps: number; views_search: number; actions_website: number; actions_phone: number }; previous: { views_maps: number; views_search: number; actions_website: number; actions_phone: number } } }) {
   const alerts: { label: string; change: string; positive: boolean }[] = []
 
   const check = (label: string, current: number, previous: number) => {
