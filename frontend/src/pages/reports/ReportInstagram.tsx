@@ -11,7 +11,7 @@ const IG_SECONDARY = '#833AB4'
 const IG_TERTIARY = '#F77737'
 const POST_TYPE_COLORS: Record<string, string> = { FEED: IG_PRIMARY, STORY: IG_SECONDARY, REELS: IG_TERTIARY }
 
-export default function ReportInstagram({ selectedMonth, storeIndex, storeName, generatedDate }: ReportProps) {
+export default function ReportInstagram({ selectedMonth, storeIndex, storeName, generatedDate, isPdf }: ReportProps) {
   const { data: allData } = useDashboardData(selectedMonth, storeIndex)
   const data = allData.instagram
   const current = data.current
@@ -25,7 +25,7 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
   const posts = data.posts.map((p) => {
     const eng = p.like_count + p.comments_count + (p.saved ?? 0) + (p.shares ?? 0)
     return { ...p, engRate: p.reach > 0 ? (eng / p.reach) * 100 : 0, engTotal: eng }
-  }).sort((a, b) => b.engRate - a.engRate).slice(0, 5)
+  }).sort((a, b) => b.engRate - a.engRate).slice(0, isPdf ? 3 : 5)
 
   const trendData = trend.map((item) => ({
     month: item.date.slice(5),
@@ -65,7 +65,7 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
   return (
     <>
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 mb-4" style={{ borderBottom: `2px solid ${IG_PRIMARY}` }}>
+      <div className={`flex items-center justify-between ${isPdf ? "pb-2 mb-2" : "pb-3 mb-4"}`} style={{ borderBottom: `2px solid ${IG_PRIMARY}` }}>
         <div>
           <h1 className="text-xl font-bold text-gray-900">Instagram 分析レポート</h1>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -79,13 +79,13 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
       </div>
 
       {/* KPI Scorecard */}
-      <div className="grid grid-cols-6 gap-2 mb-4">
+      <div className={`grid ${isPdf ? "grid-cols-5" : "grid-cols-6"} gap-2 ${isPdf ? "mb-2" : "mb-4"}`}>
         {[
           { label: 'フォロワー数', value: formatNumber(current.followers_count), change: diff(current.followers_count, previous.followers_count), changeColor: diffColor(current.followers_count, previous.followers_count) },
           { label: 'フォロワー増減', value: `${followerDiff >= 0 ? '+' : ''}${formatNumber(followerDiff)}`, change: '', changeColor: '#666' },
           { label: 'リーチ数', value: formatNumber(current.reach), change: diff(current.reach, previous.reach), changeColor: diffColor(current.reach, previous.reach) },
           { label: 'ENG率', value: formatPercent(engRate), change: diff(engRate, prevEngRate), changeColor: diffColor(engRate, prevEngRate) },
-          { label: 'インプレッション', value: formatNumber(current.impressions), change: diff(current.impressions, previous.impressions), changeColor: diffColor(current.impressions, previous.impressions) },
+          ...(!isPdf ? [{ label: 'インプレッション', value: formatNumber(current.impressions), change: diff(current.impressions, previous.impressions), changeColor: diffColor(current.impressions, previous.impressions) }] : []),
           { label: 'プロフィール表示', value: formatNumber(current.profile_views), change: diff(current.profile_views, previous.profile_views), changeColor: diffColor(current.profile_views, previous.profile_views) },
         ].map((kpi, i) => (
           <div key={i} className="rounded-lg border border-gray-200 p-2 text-center" style={{ borderTop: `3px solid ${IG_PRIMARY}` }}>
@@ -97,11 +97,11 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
       </div>
 
       {/* Main Grid: 2 columns */}
-      <div className="grid grid-cols-2 gap-4" style={{ fontSize: 11 }}>
+      <div className={`grid grid-cols-2 ${isPdf ? "gap-2" : "gap-4"}`} style={{ fontSize: 11 }}>
         {/* Left: Top Posts */}
-        <div className="space-y-3">
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">人気投稿 TOP5（ENG率順）</h3>
+        <div className={isPdf ? "space-y-2" : "space-y-3"}>
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1.5" : "text-xs mb-2"}`}>人気投稿 {isPdf ? "TOP3" : "TOP5"}（ENG率順）</h3>
             <div className="space-y-2">
               {posts.map((p, i) => {
                 const maxEng = posts[0]?.engRate ?? 1
@@ -133,7 +133,7 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1 mb-0.5">
                         <span
-                          className="px-1 py-0 rounded text-[7px] font-medium text-white flex-shrink-0"
+                          className="px-1 py-0 rounded text-[8px] font-medium text-white flex-shrink-0"
                           style={{ background: POST_TYPE_COLORS[p.media_product_type] || IG_PRIMARY }}
                         >
                           {p.media_product_type === 'FEED' ? 'フィード' : p.media_product_type === 'STORY' ? 'ストーリー' : 'リール'}
@@ -165,9 +165,10 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
           </div>
 
           {/* Post Type Breakdown */}
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">投稿タイプ別（件数 / 平均ENG率）</h3>
-            <div className="grid grid-cols-2 gap-3">
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1.5" : "text-xs mb-2"}`}>{isPdf ? "投稿タイプ別（平均ENG率）" : "投稿タイプ別（件数 / 平均ENG率）"}</h3>
+            <div className={isPdf ? "" : "grid grid-cols-2 gap-3"}>
+              {!isPdf && (
               <div style={{ height: 100 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={typeData} margin={{ left: 0, right: 5, top: 0, bottom: 0 }}>
@@ -182,12 +183,13 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <div style={{ height: 100 }}>
+              )}
+              <div style={{ height: isPdf ? 80 : 100 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={engByType} margin={{ left: 0, right: 5, top: 0, bottom: 0 }}>
                     <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} />
                     <YAxis hide />
-                    <Tooltip contentStyle={{ fontSize: 10, borderRadius: 6, border: '1px solid #e5e7eb' }} formatter={(v) => [`${v}%`, '平均ENG率']} />
+                    {!isPdf && <Tooltip contentStyle={{ fontSize: 10, borderRadius: 6, border: '1px solid #e5e7eb' }} formatter={(v) => [`${v}%`, '平均ENG率']} />}
                     <Bar dataKey="avg" name="平均ENG率" radius={[3, 3, 0, 0]}>
                       {engByType.map((entry, i) => (
                         <Cell key={i} fill={POST_TYPE_COLORS[entry.type] || IG_PRIMARY} />
@@ -201,11 +203,11 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
         </div>
 
         {/* Right: Charts */}
-        <div className="space-y-3">
+        <div className={isPdf ? "space-y-2" : "space-y-3"}>
           {/* Follower Trend */}
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">フォロワー推移（過去6ヶ月）</h3>
-            <div style={{ height: 130 }}>
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1.5" : "text-xs mb-2"}`}>フォロワー推移（過去6ヶ月）</h3>
+            <div style={{ height: isPdf ? 110 : 130 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
                   <defs>
@@ -217,7 +219,7 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ fontSize: 10, borderRadius: 6, border: '1px solid #e5e7eb' }} />
+                  {!isPdf && <Tooltip contentStyle={{ fontSize: 10, borderRadius: 6, border: '1px solid #e5e7eb' }} />}
                   <Area type="monotone" dataKey="followers" name="フォロワー" stroke={IG_PRIMARY} fill="url(#igGrad)" strokeWidth={2} dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -225,9 +227,9 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
           </div>
 
           {/* Reach Trend */}
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">リーチ数推移（過去6ヶ月）</h3>
-            <div style={{ height: 130 }}>
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1.5" : "text-xs mb-2"}`}>リーチ数推移（過去6ヶ月）</h3>
+            <div style={{ height: isPdf ? 110 : 130 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
                   <defs>
@@ -239,7 +241,7 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ fontSize: 10, borderRadius: 6, border: '1px solid #e5e7eb' }} />
+                  {!isPdf && <Tooltip contentStyle={{ fontSize: 10, borderRadius: 6, border: '1px solid #e5e7eb' }} />}
                   <Area type="monotone" dataKey="reach" name="リーチ" stroke={IG_SECONDARY} fill="url(#igReachGrad)" strokeWidth={2} dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -247,8 +249,8 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
           </div>
 
           {/* Action Items */}
-          <div className="rounded-lg border-2 p-3" style={{ borderColor: '#FCE7EF', background: '#FFF5F8' }}>
-            <h3 className="text-xs font-bold mb-2" style={{ color: IG_PRIMARY }}>インサイト & アクション</h3>
+          <div className={`rounded-lg border-2 ${isPdf ? "p-2" : "p-3"}`} style={{ borderColor: '#FCE7EF', background: '#FFF5F8' }}>
+            <h3 className={`font-bold ${isPdf ? "text-[10px] mb-1.5" : "text-xs mb-2"}`} style={{ color: IG_PRIMARY }}>インサイト & アクション</h3>
             <ul className="space-y-1 text-[10px] text-gray-700 list-disc list-inside">
               <li>最もENG率の高い投稿タイプ: <strong>{engByType.sort((a, b) => b.avg - a.avg)[0]?.name}</strong></li>
               <li>{posts[0] ? `「${posts[0].caption.slice(0, 20)}...」が最高ENG率 → 類似コンテンツ強化` : 'ENG率の改善を検討'}</li>
@@ -260,7 +262,7 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
       </div>
 
       {/* Footer */}
-      <div className="mt-3 pt-2 border-t border-gray-200 flex justify-between text-[8px] text-gray-400">
+      <div className={`${isPdf ? "mt-auto" : "absolute bottom-0 left-0 right-0"} px-8 pb-4 pt-2 border-t border-gray-200 flex justify-between text-[8px] text-gray-400`}>
         <span>Data Source: Instagram Graph API / Instagram Insights</span>
         <span>&copy; 2026 GNS inc. - SNS Analytics Dashboard</span>
       </div>

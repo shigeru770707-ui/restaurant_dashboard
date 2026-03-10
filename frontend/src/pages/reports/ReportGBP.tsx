@@ -14,7 +14,7 @@ function StarText({ rating }: { rating: number }) {
   return <span style={{ color: '#F9AB00' }}>{'★'.repeat(Math.round(rating))}{'☆'.repeat(5 - Math.round(rating))}</span>
 }
 
-export default function ReportGBP({ selectedMonth, storeIndex, storeName, generatedDate, storeNames }: ReportProps) {
+export default function ReportGBP({ selectedMonth, storeIndex, storeName, generatedDate, storeNames, isPdf }: ReportProps) {
   const { data: allData } = useDashboardData(selectedMonth, storeIndex)
   const data = allData.gbp
   const current = data.current
@@ -52,8 +52,8 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
     { name: 'Google検索', value: current.views_search, color: '#EA4335' },
   ]
 
-  // Recent reviews (top 3)
-  const topReviews = reviews.slice(0, 3)
+  // Recent reviews
+  const topReviews = reviews.slice(0, isPdf ? 2 : 3)
 
   // Store comparison
   const storeComparison = storeNames.map((name, i) => {
@@ -74,7 +74,7 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
   return (
     <>
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 mb-4" style={{ borderBottom: `2px solid ${GBP_RED}` }}>
+      <div className={`flex items-center justify-between ${isPdf ? "pb-2 mb-2" : "pb-3 mb-4"}`} style={{ borderBottom: `2px solid ${GBP_RED}` }}>
         <div>
           <h1 className="text-xl font-bold text-gray-900">Googleビジネスプロフィール 分析レポート</h1>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -88,7 +88,7 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
       </div>
 
       {/* KPI Scorecard */}
-      <div className="grid grid-cols-6 gap-2 mb-4">
+      <div className={`grid grid-cols-6 gap-2 ${isPdf ? "mb-2" : "mb-4"}`}>
         {[
           { label: '表示回数', value: formatNumber(totalViews), change: diff(totalViews, prevTotalViews), changeColor: diffColor(totalViews, prevTotalViews) },
           { label: 'アクション合計', value: formatNumber(totalActions), change: diff(totalActions, prevTotalActions), changeColor: diffColor(totalActions, prevTotalActions) },
@@ -106,12 +106,12 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
       </div>
 
       {/* Main Grid */}
-      <div className="grid grid-cols-2 gap-4" style={{ fontSize: 11 }}>
+      <div className={`grid grid-cols-2 ${isPdf ? "gap-3" : "gap-4"}`} style={{ fontSize: 11 }}>
         {/* Left: Actions + Rating */}
-        <div className="space-y-3">
+        <div className={isPdf ? "space-y-2" : "space-y-3"}>
           {/* Action Breakdown */}
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">アクション内訳</h3>
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>アクション内訳</h3>
             <div className="grid grid-cols-3 gap-2 text-center">
               {[
                 { label: 'ウェブサイト', value: current.actions_website, color: '#4285F4', pct: totalActions > 0 ? ((current.actions_website / totalActions) * 100).toFixed(1) : '0' },
@@ -128,8 +128,8 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
           </div>
 
           {/* Impression Breakdown */}
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">表示内訳</h3>
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>表示内訳</h3>
             <div className="grid grid-cols-2 gap-2">
               <div style={{ height: 80 }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -157,15 +157,15 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
           </div>
 
           {/* Rating Distribution */}
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">評価分布</h3>
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>評価分布</h3>
             <div className="flex gap-3">
               <div className="text-center">
                 <p className="text-2xl font-bold text-gray-900">{avgRating.toFixed(1)}</p>
                 <p className="text-[9px]"><StarText rating={avgRating} /></p>
                 <p className="text-[8px] text-gray-400">{totalRatings}件</p>
               </div>
-              <div className="flex-1" style={{ height: 70 }}>
+              <div className="flex-1" style={{ height: isPdf ? 60 : 70 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={ratingChartData} layout="vertical" margin={{ left: 0, right: 5, top: 0, bottom: 0 }}>
                     <XAxis type="number" hide />
@@ -183,17 +183,17 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
         </div>
 
         {/* Right: Trends + Reviews */}
-        <div className="space-y-3">
+        <div className={isPdf ? "space-y-2" : "space-y-3"}>
           {/* Search Trend */}
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">表示回数推移（Maps vs 検索）</h3>
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>表示回数推移（Maps vs 検索）</h3>
             <div style={{ height: 100 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ fontSize: 10, borderRadius: 6, border: '1px solid #e5e7eb' }} />
+                  {!isPdf && <Tooltip contentStyle={{ fontSize: 10, borderRadius: 6, border: '1px solid #e5e7eb' }} />}
                   <Legend wrapperStyle={{ fontSize: 9 }} />
                   <Line type="monotone" dataKey="maps" name="Maps" stroke="#4285F4" strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey="search" name="検索" stroke="#EA4335" strokeWidth={2} dot={false} />
@@ -203,8 +203,8 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
           </div>
 
           {/* Recent Reviews */}
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">最近の口コミ</h3>
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>最近の口コミ</h3>
             <div className="space-y-1.5">
               {topReviews.map((r, i) => (
                 <div key={i} className="rounded border border-gray-100 p-2" style={{ borderLeftWidth: 3, borderLeftColor: RATING_COLORS[r.rating] || '#999' }}>
@@ -219,8 +219,8 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
           </div>
 
           {/* Store Comparison */}
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">店舗間比較</h3>
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>店舗間比較</h3>
             <table className="w-full text-[9px]">
               <thead>
                 <tr className="border-b border-gray-200">
@@ -244,8 +244,8 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
           </div>
 
           {/* Action Items */}
-          <div className="rounded-lg border-2 p-3" style={{ borderColor: '#FECACA', background: '#FEF2F2' }}>
-            <h3 className="text-xs font-bold mb-2" style={{ color: GBP_RED }}>インサイト & アクション</h3>
+          <div className={`rounded-lg border-2 ${isPdf ? "p-2" : "p-3"}`} style={{ borderColor: '#FECACA', background: '#FEF2F2' }}>
+            <h3 className={`font-bold ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`} style={{ color: GBP_RED }}>インサイト & アクション</h3>
             <ul className="space-y-1 text-[10px] text-gray-700 list-disc list-inside">
               <li>平均評価 {avgRating.toFixed(1)} {avgRating >= 4.6 ? '→ 業界平均4.6以上' : '→ 口コミ返信強化で改善を目指す'}</li>
               <li>返信率 {replyRate}% {replyRate >= 73 ? '→ 良好' : '→ 目標73%まで返信率を向上'}</li>
@@ -256,7 +256,7 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
       </div>
 
       {/* Footer */}
-      <div className="mt-3 pt-2 border-t border-gray-200 flex justify-between text-[8px] text-gray-400">
+      <div className={`${isPdf ? "mt-auto" : "absolute bottom-0 left-0 right-0"} px-8 pb-4 pt-2 border-t border-gray-200 flex justify-between text-[8px] text-gray-400`}>
         <span>Data Source: Google Business Profile API / Google My Business</span>
         <span>&copy; 2026 GNS inc. - SNS Analytics Dashboard</span>
       </div>

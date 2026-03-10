@@ -15,6 +15,11 @@ env/
 # Streamlit secrets (contains API keys)
 .streamlit/secrets.toml
 
+# Environment variables (contains encryption keys)
+.env
+.env.*
+!.env.example
+
 # Database
 *.db
 

@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from db.crypto import CREDENTIAL_FIELDS, decrypt_row, encrypt_dict
+
 DB_PATH = Path(os.environ.get("DB_PATH", Path(__file__).parent.parent / "dashboard.db"))
 
 
@@ -182,61 +184,67 @@ def init_db():
 # ---- 店舗 CRUD ----
 
 def upsert_store(name: str, store_key: str, **kwargs) -> int:
-    """店舗をupsert。存在すれば更新、なければ挿入."""
+    """店舗をupsert。存在すれば更新、なければ挿入（認証情報は暗号化）."""
+    encrypted_kwargs = encrypt_dict(kwargs)
     with get_connection() as conn:
         existing = conn.execute(
             "SELECT id FROM stores WHERE store_key = ?", (store_key,)
         ).fetchone()
         if existing:
-            sets = ", ".join(f"{k} = ?" for k in kwargs)
+            sets = ", ".join(f"{k} = ?" for k in encrypted_kwargs)
             if sets:
                 conn.execute(
                     f"UPDATE stores SET name = ?, {sets} WHERE store_key = ?",
-                    (name, *kwargs.values(), store_key),
+                    (name, *encrypted_kwargs.values(), store_key),
                 )
             return existing["id"]
-        cols = ["name", "store_key"] + list(kwargs.keys())
+        cols = ["name", "store_key"] + list(encrypted_kwargs.keys())
         placeholders = ", ".join("?" for _ in cols)
         col_str = ", ".join(cols)
         cursor = conn.execute(
             f"INSERT INTO stores ({col_str}) VALUES ({placeholders})",
-            (name, store_key, *kwargs.values()),
+            (name, store_key, *encrypted_kwargs.values()),
         )
         return cursor.lastrowid
 
 
 def get_all_stores() -> list[dict]:
-    """全店舗を取得."""
+    """全店舗を取得（認証情報は復号済み）."""
     with get_connection() as conn:
         rows = conn.execute("SELECT * FROM stores ORDER BY id").fetchall()
-        return [dict(r) for r in rows]
+        return [decrypt_row(dict(r)) for r in rows]
 
 
 def get_store_by_key(store_key: str):
-    """store_keyで店舗を検索."""
+    """store_keyで店舗を検索（認証情報は復号済み）."""
     with get_connection() as conn:
         row = conn.execute(
             "SELECT * FROM stores WHERE store_key = ?", (store_key,)
         ).fetchone()
-        return dict(row) if row else None
+        if not row:
+            return None
+        return decrypt_row(dict(row))
 
 
 def get_store_credentials(store_id: int) -> dict | None:
-    """店舗のAPI認証情報を取得."""
+    """店舗のAPI認証情報を取得（復号済み）."""
     with get_connection() as conn:
         row = conn.execute("SELECT * FROM stores WHERE id = ?", (store_id,)).fetchone()
-        return dict(row) if row else None
+        if not row:
+            return None
+        return decrypt_row(dict(row))
 
 
 def update_store_credentials(store_id: int, **credentials) -> bool:
-    """店舗のAPI認証情報を更新."""
+    """店舗のAPI認証情報を更新（暗号化して保存）."""
     if not credentials:
         return False
+    encrypted = encrypt_dict(credentials)
     with get_connection() as conn:
-        sets = ", ".join(f"{k} = ?" for k in credentials)
+        sets = ", ".join(f"{k} = ?" for k in encrypted)
         conn.execute(
             f"UPDATE stores SET {sets}, credentials_updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-            (*credentials.values(), store_id),
+            (*encrypted.values(), store_id),
         )
         return True
 

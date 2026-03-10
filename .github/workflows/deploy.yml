@@ -25,6 +25,12 @@ jobs:
             # 最新コードを取得
             git pull origin main
 
+            # セキュリティ環境変数を .env に書き出し
+            printf 'CREDENTIAL_ENCRYPTION_KEY=%s\nBACKEND_API_KEY=%s\n' \
+              '${{ secrets.CREDENTIAL_ENCRYPTION_KEY }}' \
+              '${{ secrets.BACKEND_API_KEY }}' > .env
+            chmod 600 .env
+
             # Docker Compose でビルド＆再起動
             docker compose down
             docker compose up -d --build

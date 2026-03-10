@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "80:80"
+    environment:
+      - BACKEND_API_KEY=${BACKEND_API_KEY}
     depends_on:
       - backend
 
@@ -18,17 +20,21 @@ services:
       - dashboard_data:/app/data
     environment:
       - DB_PATH=/app/data/dashboard.db
+      - BACKEND_API_KEY=${BACKEND_API_KEY}
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
+      - CORS_ALLOWED_ORIGINS=http://frontend
 
   dashboard:
     build: .
-    ports:
-      - "8501:8501"
+    expose:
+      - "8501"
     volumes:
       - dashboard_data:/app/data
       - ./.streamlit/secrets.toml:/app/.streamlit/secrets.toml:ro
     environment:
       - STREAMLIT_SERVER_HEADLESS=true
       - DB_PATH=/app/data/dashboard.db
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
 
 volumes:
   dashboard_data:

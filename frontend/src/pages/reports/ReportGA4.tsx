@@ -11,7 +11,7 @@ const PIE_COLORS = ['#F9AB00', '#4285F4', '#34A853', '#EA4335', '#AB47BC']
 const DEVICE_COLORS = ['#4285F4', '#34A853', '#F9AB00']
 const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
 
-export default function ReportGA4({ selectedMonth, storeIndex, storeName, generatedDate }: ReportProps) {
+export default function ReportGA4({ selectedMonth, storeIndex, storeName, generatedDate, isPdf }: ReportProps) {
   const { data: allData } = useDashboardData(selectedMonth, storeIndex)
   const data = allData.ga4
   const current = data.current
@@ -33,7 +33,7 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
   }))
 
   const pieData = trafficSources.map((s) => ({ name: s.channel, value: s.sessions }))
-  const topPages = pages.slice(0, 5)
+  const topPages = pages.slice(0, isPdf ? 3 : 5)
 
   // Heatmap
   const hours = Array.from({ length: 15 }, (_, i) => i + 8)
@@ -49,7 +49,7 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
   return (
     <>
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 mb-4" style={{ borderBottom: `2px solid ${GA4_BLUE}` }}>
+      <div className={`flex items-center justify-between ${isPdf ? "pb-2 mb-2" : "pb-3 mb-4"}`} style={{ borderBottom: `2px solid ${GA4_BLUE}` }}>
         <div>
           <h1 className="text-xl font-bold text-gray-900">Google Analytics 4 分析レポート</h1>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -63,7 +63,7 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
       </div>
 
       {/* KPI Scorecard */}
-      <div className="grid grid-cols-6 gap-2 mb-4">
+      <div className={`grid grid-cols-6 gap-2 ${isPdf ? "mb-2" : "mb-4"}`}>
         {[
           { label: 'セッション数', value: formatNumber(current.sessions), change: diff(current.sessions, previous.sessions), changeColor: diffColor(current.sessions, previous.sessions) },
           { label: 'アクティブユーザー', value: formatNumber(current.active_users), change: diff(current.active_users, previous.active_users), changeColor: diffColor(current.active_users, previous.active_users) },
@@ -81,12 +81,12 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
       </div>
 
       {/* Main Grid */}
-      <div className="grid grid-cols-2 gap-4" style={{ fontSize: 11 }}>
+      <div className={`grid grid-cols-2 ${isPdf ? "gap-3" : "gap-4"}`} style={{ fontSize: 11 }}>
         {/* Left: Traffic + Pages */}
-        <div className="space-y-3">
+        <div className={isPdf ? "space-y-2" : "space-y-3"}>
           {/* Traffic Sources */}
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">流入チャネル</h3>
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>流入チャネル</h3>
             <div className="grid grid-cols-2 gap-2">
               <div style={{ height: 100 }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -119,8 +119,8 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
           </div>
 
           {/* Page Ranking */}
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">人気ページ TOP5</h3>
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>人気ページ {isPdf ? "TOP3" : "TOP5"}</h3>
             <table className="w-full text-[9px]">
               <thead>
                 <tr className="border-b border-gray-200">
@@ -149,6 +149,7 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
           </div>
 
           {/* Demographics */}
+          {!isPdf && (
           <div className="rounded-lg border border-gray-200 p-3">
             <h3 className="text-xs font-bold text-gray-700 mb-2">ユーザー属性</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -181,13 +182,14 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Right: Trends + Heatmap */}
-        <div className="space-y-3">
+        <div className={isPdf ? "space-y-2" : "space-y-3"}>
           {/* Session Trend */}
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">セッション数推移（過去6ヶ月）</h3>
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>セッション数推移（過去6ヶ月）</h3>
             <div style={{ height: 100 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
@@ -200,7 +202,7 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ fontSize: 10, borderRadius: 6, border: '1px solid #e5e7eb' }} />
+                  {!isPdf && <Tooltip contentStyle={{ fontSize: 10, borderRadius: 6, border: '1px solid #e5e7eb' }} />}
                   <Area type="monotone" dataKey="sessions" name="セッション" stroke={GA4_BLUE} fill="url(#ga4Grad)" strokeWidth={2} dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -208,15 +210,15 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
           </div>
 
           {/* Bounce Rate Trend */}
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">直帰率トレンド（過去6ヶ月）</h3>
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>直帰率トレンド（過去6ヶ月）</h3>
             <div style={{ height: 100 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 9, fill: '#666' }} unit="%" axisLine={false} tickLine={false} domain={['auto', 'auto']} />
-                  <Tooltip contentStyle={{ fontSize: 10, borderRadius: 6, border: '1px solid #e5e7eb' }} formatter={(v) => [`${v}%`, '直帰率']} />
+                  {!isPdf && <Tooltip contentStyle={{ fontSize: 10, borderRadius: 6, border: '1px solid #e5e7eb' }} formatter={(v) => [`${v}%`, '直帰率']} />}
                   <ReferenceLine y={56} stroke="#EA4335" strokeDasharray="6 3" strokeWidth={1.5} />
                   <Area type="monotone" dataKey="bounce_rate" name="直帰率" stroke="#EA4335" fill="rgba(234,67,53,0.08)" strokeWidth={2} dot={false} />
                 </AreaChart>
@@ -225,9 +227,9 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
           </div>
 
           {/* Session Heatmap */}
-          <div className="rounded-lg border border-gray-200 p-3">
-            <h3 className="text-xs font-bold text-gray-700 mb-2">セッション時間帯ヒートマップ</h3>
-            <table className="w-full text-[7px] border-separate" style={{ borderSpacing: 1 }}>
+          <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>セッション時間帯ヒートマップ</h3>
+            <table className={`w-full border-separate ${isPdf ? "text-[8px]" : "text-[7px]"}`} style={{ borderSpacing: 1 }}>
               <thead>
                 <tr>
                   <th className="w-5" />
@@ -257,8 +259,8 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
           </div>
 
           {/* Action Items */}
-          <div className="rounded-lg border-2 p-3" style={{ borderColor: '#BFDBFE', background: '#EFF6FF' }}>
-            <h3 className="text-xs font-bold mb-2" style={{ color: GA4_BLUE }}>インサイト & アクション</h3>
+          <div className={`rounded-lg border-2 ${isPdf ? "p-2" : "p-3"}`} style={{ borderColor: '#BFDBFE', background: '#EFF6FF' }}>
+            <h3 className={`font-bold ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`} style={{ color: GA4_BLUE }}>インサイト & アクション</h3>
             <ul className="space-y-1 text-[10px] text-gray-700 list-disc list-inside">
               <li>CVR {cvr.toFixed(2)}% {cvr >= 2 ? '→ 良好な水準' : '→ LP改善でCV数向上を目指す'}</li>
               <li>直帰率 {current.bounce_rate.toFixed(1)}% {current.bounce_rate <= 56 ? '→ 業界平均56%以下' : '→ 業界平均56%超、UI改善推奨'}</li>
@@ -270,7 +272,7 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
       </div>
 
       {/* Footer */}
-      <div className="mt-3 pt-2 border-t border-gray-200 flex justify-between text-[8px] text-gray-400">
+      <div className={`${isPdf ? "mt-auto" : "absolute bottom-0 left-0 right-0"} px-8 pb-4 pt-2 border-t border-gray-200 flex justify-between text-[8px] text-gray-400`}>
         <span>Data Source: Google Analytics 4 Data API</span>
         <span>&copy; 2026 GNS inc. - SNS Analytics Dashboard</span>
       </div>

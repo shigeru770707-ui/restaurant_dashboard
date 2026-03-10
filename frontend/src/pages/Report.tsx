@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useMonth } from '@/hooks/useMonth'
-import { exportToPDF } from '@/utils/pdfExport'
 import type { ReportType } from '@/components/common/ExportDropdown'
 import ReportSummary from './reports/ReportSummary'
 import ReportInstagram from './reports/ReportInstagram'
@@ -23,7 +22,7 @@ export default function Report() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { selectedMonth } = useMonth()
   const reportRef = useRef<HTMLDivElement>(null)
-  const [exporting, setExporting] = useState(false)
+  const [isPdf, setIsPdf] = useState(false)
 
   const reportType = (searchParams.get('type') || 'summary') as ReportType
   const selectedStore = Math.min(
@@ -35,17 +34,33 @@ export default function Report() {
     setSearchParams({ type, store: String(store) })
   }
 
-  const handleExport = async () => {
-    if (!reportRef.current) return
-    setExporting(true)
-    try {
-      const now = new Date()
-      const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
-      const typeLabel = REPORT_TYPE_LABELS[reportType].replace(/\s/g, '')
-      await exportToPDF(reportRef.current, `${typeLabel}_${STORE_NAMES[selectedStore]}_${dateStr}.pdf`)
-    } finally {
-      setExporting(false)
-    }
+  const handleExport = () => {
+    setIsPdf(true)
+    // isPdf適用後のレンダリングを待ってからprint
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = reportRef.current
+        if (!el) return
+
+        // isPdf再レンダリング後のコンテンツ高さを計測
+        const contentHeight = el.scrollHeight
+        const a4Height = 793 // 210mm @96dpi
+        // コンテンツがA4に収まらない場合、zoomで微調整
+        if (contentHeight > a4Height) {
+          el.style.zoom = String(a4Height / contentHeight)
+        }
+
+        const originalTitle = document.title
+        const now = new Date()
+        const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
+        const typeLabel = REPORT_TYPE_LABELS[reportType].replace(/\s/g, '')
+        document.title = `${typeLabel}_${STORE_NAMES[selectedStore]}_${dateStr}`
+        window.print()
+        document.title = originalTitle
+        el.style.zoom = ''
+        setIsPdf(false)
+      })
+    })
   }
 
   const today = new Date()
@@ -57,6 +72,7 @@ export default function Report() {
     storeName: STORE_NAMES[selectedStore],
     generatedDate,
     storeNames: STORE_NAMES,
+    isPdf,
   }
 
   return (
@@ -92,19 +108,18 @@ export default function Report() {
         </div>
         <button
           onClick={handleExport}
-          disabled={exporting}
-          className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
         >
           <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
-          {exporting ? 'PDF生成中...' : 'PDF出力'}
+          PDF出力
         </button>
       </div>
 
       {/* Report Content - A4 Landscape */}
       <div
         ref={reportRef}
-        className="mx-auto bg-white shadow-xl"
-        style={{ width: 1122, minHeight: 793, padding: 32, fontFamily: 'system-ui, -apple-system, sans-serif' }}
+        className="report-content mx-auto bg-white shadow-xl flex flex-col"
+        style={{ width: 1122, minHeight: 793, padding: 32, position: 'relative', fontFamily: 'system-ui, -apple-system, sans-serif' }}
       >
         {reportType === 'summary' && <ReportSummary {...reportProps} />}
         {reportType === 'instagram' && <ReportInstagram {...reportProps} />}
