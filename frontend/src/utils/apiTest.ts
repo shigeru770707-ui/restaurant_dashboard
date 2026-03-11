@@ -4,6 +4,7 @@ import type {
   ApiSettings,
   ConnectionTestResult,
 } from '@/types/settings'
+import { postJson } from '@/utils/api'
 
 export async function testInstagram(
   settings: InstagramStoreSettings
@@ -64,15 +65,26 @@ export async function testLine(
 export async function testGA4(
   settings: ApiSettings['ga4']
 ): Promise<ConnectionTestResult> {
-  if (!settings.clientEmail || !settings.privateKey || !settings.propertyId) {
+  if (!settings.serviceAccountJson || !settings.propertyId) {
     return {
       status: 'error',
-      message: 'Client Email、Private Key、Property IDをすべて入力してください',
+      message: 'サービスアカウントJSONとProperty IDを入力してください',
     }
   }
-  return {
-    status: 'success',
-    message: `設定保存済み（Property ID: ${settings.propertyId}）※接続確認はバックエンド経由で行われます`,
+  try {
+    const data = await postJson<{ ok: boolean; message: string }>('/api/test/ga4', {
+      property_id: settings.propertyId,
+      service_account_json: settings.serviceAccountJson,
+    })
+    return {
+      status: data.ok ? 'success' : 'error',
+      message: data.message,
+    }
+  } catch (e) {
+    return {
+      status: 'error',
+      message: `接続失敗: ${e instanceof Error ? e.message : '不明なエラー'}`,
+    }
   }
 }
 
@@ -80,19 +92,32 @@ export async function testGBP(
   settings: GBPStoreSettings
 ): Promise<ConnectionTestResult> {
   if (
-    !settings.clientEmail ||
-    !settings.privateKey ||
-    !settings.accountId ||
+    !settings.oauthClientId ||
+    !settings.oauthClientSecret ||
+    !settings.refreshToken ||
     !settings.locationId
   ) {
     return {
       status: 'error',
       message:
-        'Client Email、Private Key、Account ID、Location IDをすべて入力してください',
+        'OAuth Client ID、Client Secret、リフレッシュトークン、Location IDをすべて入力してください',
     }
   }
-  return {
-    status: 'success',
-    message: `設定保存済み（Location ID: ${settings.locationId}）※接続確認はバックエンド経由で行われます`,
+  try {
+    const data = await postJson<{ ok: boolean; message: string }>('/api/test/gbp', {
+      location_id: settings.locationId,
+      oauth_client_id: settings.oauthClientId,
+      oauth_client_secret: settings.oauthClientSecret,
+      oauth_refresh_token: settings.refreshToken,
+    })
+    return {
+      status: data.ok ? 'success' : 'error',
+      message: data.message,
+    }
+  } catch (e) {
+    return {
+      status: 'error',
+      message: `接続失敗: ${e instanceof Error ? e.message : '不明なエラー'}`,
+    }
   }
 }

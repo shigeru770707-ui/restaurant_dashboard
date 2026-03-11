@@ -17,6 +17,23 @@ async function fetchJson<T>(url: string): Promise<T> {
   return res.json()
 }
 
+export async function postJson<T>(url: string, data: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function saveCredentials(
+  storeId: number,
+  credentials: Record<string, string>,
+): Promise<{ ok: boolean; message: string }> {
+  return postJson(`${BASE}/stores/${storeId}/credentials`, credentials)
+}
+
 // ---------- stores ----------
 
 export interface Store {

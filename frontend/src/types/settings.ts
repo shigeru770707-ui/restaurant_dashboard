@@ -9,16 +9,15 @@ export interface LineSettings {
 }
 
 export interface GA4Settings {
-  clientEmail: string
-  privateKey: string
   propertyId: string
+  serviceAccountJson: string
 }
 
 export interface GBPStoreSettings {
   storeName: string
-  clientEmail: string
-  privateKey: string
-  accountId: string
+  oauthClientId: string
+  oauthClientSecret: string
+  refreshToken: string
   locationId: string
 }
 

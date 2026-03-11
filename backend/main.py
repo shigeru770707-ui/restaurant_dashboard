@@ -1,12 +1,16 @@
 """FastAPI backend for Restaurant Media Dashboard."""
 
+import json
+import logging
 import os
 import secrets
 import sys
 from pathlib import Path
+from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 # Add parent directory to path so we can import existing modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -19,9 +23,13 @@ from db.database import (
     get_instagram_posts_df,
     get_line_message_metrics_df,
     get_metrics_df,
+    get_store_credentials,
     init_db,
+    update_store_credentials,
 )
 from analysis.recommender import generate_recommendations
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Restaurant Dashboard API")
 
@@ -37,7 +45,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -153,3 +161,109 @@ def get_recommendations(
         "ga4_sources": get_ga4_traffic_sources_df(store_id, start_date, end_date),
     }
     return generate_recommendations(data)
+
+
+# ---- 接続テスト・資格情報保存 ----
+
+
+class GA4TestRequest(BaseModel):
+    property_id: str
+    service_account_json: str
+
+
+class GBPTestRequest(BaseModel):
+    location_id: str
+    oauth_client_id: str
+    oauth_client_secret: str
+    oauth_refresh_token: str
+
+
+class CredentialSaveRequest(BaseModel):
+    # Instagram
+    instagram_user_id: Optional[str] = None
+    instagram_access_token: Optional[str] = None
+    # LINE
+    line_channel_access_token: Optional[str] = None
+    # GA4
+    ga4_property_id: Optional[str] = None
+    ga4_service_account_json: Optional[str] = None
+    # GBP
+    gbp_location_id: Optional[str] = None
+    gbp_oauth_client_id: Optional[str] = None
+    gbp_oauth_client_secret: Optional[str] = None
+    gbp_oauth_refresh_token: Optional[str] = None
+
+
+@app.post("/api/test/ga4", dependencies=[Depends(verify_api_key)])
+def test_ga4_connection(req: GA4TestRequest):
+    """GA4 Data API への接続テスト."""
+    if not req.property_id or not req.service_account_json:
+        return {"ok": False, "message": "Property IDとサービスアカウントJSONを入力してください"}
+    try:
+        from google.analytics.data_v1beta import BetaAnalyticsDataClient
+        from google.analytics.data_v1beta.types import (
+            DateRange,
+            Metric,
+            RunReportRequest,
+        )
+
+        sa_json = req.service_account_json.strip()
+        if sa_json.startswith("{"):
+            info = json.loads(sa_json)
+            client = BetaAnalyticsDataClient.from_service_account_info(info)
+        else:
+            client = BetaAnalyticsDataClient.from_service_account_json(sa_json)
+
+        request = RunReportRequest(
+            property=f"properties/{req.property_id}",
+            date_ranges=[DateRange(start_date="yesterday", end_date="yesterday")],
+            metrics=[Metric(name="sessions")],
+        )
+        response = client.run_report(request)
+        sessions = 0
+        if response.rows:
+            sessions = int(response.rows[0].metric_values[0].value)
+        return {"ok": True, "message": f"接続成功: 昨日のセッション数 = {sessions}"}
+    except Exception as e:
+        logger.exception("GA4 connection test failed")
+        return {"ok": False, "message": f"接続失敗: {e}"}
+
+
+@app.post("/api/test/gbp", dependencies=[Depends(verify_api_key)])
+def test_gbp_connection(req: GBPTestRequest):
+    """GBP Performance API への接続テスト（トークンリフレッシュ）."""
+    if not all([req.location_id, req.oauth_client_id, req.oauth_client_secret, req.oauth_refresh_token]):
+        return {"ok": False, "message": "すべての項目を入力してください"}
+    try:
+        from google.auth.transport.requests import Request
+        from google.oauth2.credentials import Credentials
+
+        creds = Credentials(
+            token=None,
+            refresh_token=req.oauth_refresh_token,
+            client_id=req.oauth_client_id,
+            client_secret=req.oauth_client_secret,
+            token_uri="https://oauth2.googleapis.com/token",
+        )
+        creds.refresh(Request())
+        return {"ok": True, "message": f"接続成功: トークン取得OK (location: {req.location_id})"}
+    except Exception as e:
+        logger.exception("GBP connection test failed")
+        return {"ok": False, "message": f"接続失敗: {e}"}
+
+
+@app.post("/api/stores/{store_id}/credentials", dependencies=[Depends(verify_api_key)])
+def save_credentials(store_id: int, req: CredentialSaveRequest):
+    """店舗の認証情報をDBに保存."""
+    store = get_store_credentials(store_id)
+    if not store:
+        raise HTTPException(status_code=404, detail="Store not found")
+
+    creds = {k: v for k, v in req.model_dump().items() if v is not None}
+    if not creds:
+        return {"ok": False, "message": "保存する認証情報がありません"}
+
+    ok = update_store_credentials(store_id, **creds)
+    if ok:
+        return {"ok": True, "message": "認証情報を保存しました"}
+    return {"ok": False, "message": "保存に失敗しました"}

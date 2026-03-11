@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { useApiSettings } from '@/hooks/useApiSettings'
 import { testInstagram, testLine, testGA4, testGBP } from '@/utils/apiTest'
+import { saveCredentials } from '@/utils/api'
 import type { ConnectionStatus, ConnectionTestResult } from '@/types/settings'
 
 function StatusIndicator({
@@ -134,10 +135,45 @@ export default function Settings() {
     setGbpMessages((p) => ({ ...p, [index]: result.message }))
   }
 
-  const handleSave = () => {
+  const [saveError, setSaveError] = useState('')
+
+  const handleSave = async () => {
+    // Save to localStorage
     saveSettings(settings)
+
+    // Also save GA4/GBP credentials to backend DB (store_id=1 as default)
+    try {
+      const ga4Creds: Record<string, string> = {}
+      if (settings.ga4.propertyId) ga4Creds.ga4_property_id = settings.ga4.propertyId
+      if (settings.ga4.serviceAccountJson) ga4Creds.ga4_service_account_json = settings.ga4.serviceAccountJson
+      if (Object.keys(ga4Creds).length > 0) {
+        await saveCredentials(1, ga4Creds)
+      }
+
+      // Save first GBP store credentials
+      if (settings.gbp.length > 0) {
+        const gbp = settings.gbp[0]
+        const gbpCreds: Record<string, string> = {}
+        if (gbp.locationId) gbpCreds.gbp_location_id = gbp.locationId
+        if (gbp.oauthClientId) gbpCreds.gbp_oauth_client_id = gbp.oauthClientId
+        if (gbp.oauthClientSecret) gbpCreds.gbp_oauth_client_secret = gbp.oauthClientSecret
+        if (gbp.refreshToken) gbpCreds.gbp_oauth_refresh_token = gbp.refreshToken
+        if (Object.keys(gbpCreds).length > 0) {
+          await saveCredentials(1, gbpCreds)
+        }
+      }
+
+      setSaveError('')
+    } catch (e) {
+      console.warn('Backend credential save failed:', e)
+      setSaveError('ローカルに保存しました（バックエンドへの保存に失敗しました）')
+    }
+
     setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setTimeout(() => {
+      setSaved(false)
+      setSaveError('')
+    }, 3000)
   }
 
   return (
@@ -299,42 +335,31 @@ export default function Settings() {
             </CardAction>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="ga4-email">Client Email</Label>
-                <Input
-                  id="ga4-email"
-                  type="email"
-                  placeholder="service-account@project.iam.gserviceaccount.com"
-                  value={settings.ga4.clientEmail}
-                  onChange={(e) =>
-                    updateGA4({ clientEmail: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ga4-property">Property ID</Label>
-                <Input
-                  id="ga4-property"
-                  placeholder="123456789"
-                  value={settings.ga4.propertyId}
-                  onChange={(e) =>
-                    updateGA4({ propertyId: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <div className="mt-4 space-y-2">
-              <Label htmlFor="ga4-key">Private Key</Label>
-              <Textarea
-                id="ga4-key"
-                placeholder="-----BEGIN PRIVATE KEY-----&#10;..."
-                rows={4}
-                value={settings.ga4.privateKey}
+            <div className="space-y-2">
+              <Label htmlFor="ga4-property">Property ID</Label>
+              <Input
+                id="ga4-property"
+                placeholder="123456789"
+                value={settings.ga4.propertyId}
                 onChange={(e) =>
-                  updateGA4({ privateKey: e.target.value })
+                  updateGA4({ propertyId: e.target.value })
                 }
               />
+            </div>
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="ga4-sa-json">サービスアカウントJSON</Label>
+              <Textarea
+                id="ga4-sa-json"
+                placeholder='{"type": "service_account", "project_id": "...", "private_key": "...", "client_email": "...", ...}'
+                rows={6}
+                value={settings.ga4.serviceAccountJson}
+                onChange={(e) =>
+                  updateGA4({ serviceAccountJson: e.target.value })
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Google Cloud Console からダウンロードしたサービスアカウントのJSONキーをそのまま貼り付けてください。
+              </p>
             </div>
             <StatusIndicator status={ga4Status} message={ga4Msg} />
           </CardContent>
@@ -392,7 +417,7 @@ export default function Settings() {
                     )}
                   </div>
                 </div>
-                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>店舗名</Label>
                     <Input
@@ -404,47 +429,50 @@ export default function Settings() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Client Email</Label>
-                    <Input
-                      type="email"
-                      placeholder="service-account@project.iam..."
-                      value={store.clientEmail}
-                      onChange={(e) =>
-                        updateGBPStore(i, { clientEmail: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Account ID</Label>
-                    <Input
-                      placeholder="123456789"
-                      value={store.accountId}
-                      onChange={(e) =>
-                        updateGBPStore(i, { accountId: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <Label>Location ID</Label>
                     <Input
-                      placeholder="123456789"
+                      placeholder="12345678901234567"
                       value={store.locationId}
                       onChange={(e) =>
                         updateGBPStore(i, { locationId: e.target.value })
                       }
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>OAuth Client ID</Label>
+                    <Input
+                      placeholder="xxxx.apps.googleusercontent.com"
+                      value={store.oauthClientId}
+                      onChange={(e) =>
+                        updateGBPStore(i, { oauthClientId: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>OAuth Client Secret</Label>
+                    <Input
+                      type="password"
+                      placeholder="GOCSPX-xxxxx"
+                      value={store.oauthClientSecret}
+                      onChange={(e) =>
+                        updateGBPStore(i, { oauthClientSecret: e.target.value })
+                      }
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Private Key</Label>
-                  <Textarea
-                    placeholder="-----BEGIN PRIVATE KEY-----&#10;..."
-                    rows={3}
-                    value={store.privateKey}
+                  <Label>リフレッシュトークン</Label>
+                  <Input
+                    type="password"
+                    placeholder="1//xxxxx"
+                    value={store.refreshToken}
                     onChange={(e) =>
-                      updateGBPStore(i, { privateKey: e.target.value })
+                      updateGBPStore(i, { refreshToken: e.target.value })
                     }
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Google Cloud Console でOAuth 2.0クライアントを作成し、リフレッシュトークンを取得してください。
+                  </p>
                 </div>
                 <StatusIndicator
                   status={gbpStatuses[i] || 'untested'}
@@ -463,8 +491,11 @@ export default function Settings() {
             <span className="material-symbols-outlined text-base">save</span>
             設定を保存
           </Button>
-          {saved && (
+          {saved && !saveError && (
             <span className="text-sm text-success">保存しました</span>
+          )}
+          {saveError && (
+            <span className="text-sm text-amber-600">{saveError}</span>
           )}
         </div>
       </div>

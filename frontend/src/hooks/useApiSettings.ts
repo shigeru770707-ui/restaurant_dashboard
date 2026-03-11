@@ -15,9 +15,9 @@ const emptyInstagramStore: InstagramStoreSettings = {
 
 const emptyGBPStore: GBPStoreSettings = {
   storeName: '',
-  clientEmail: '',
-  privateKey: '',
-  accountId: '',
+  oauthClientId: '',
+  oauthClientSecret: '',
+  refreshToken: '',
   locationId: '',
 }
 
@@ -28,11 +28,11 @@ const defaultSettings: ApiSettings = {
     { storeName: '新宿店', accessToken: '', userId: '' },
   ],
   line: { channelAccessToken: '' },
-  ga4: { clientEmail: '', privateKey: '', propertyId: '' },
+  ga4: { propertyId: '', serviceAccountJson: '' },
   gbp: [
-    { storeName: '渋谷店', clientEmail: '', privateKey: '', accountId: '', locationId: '' },
-    { storeName: '表参道店', clientEmail: '', privateKey: '', accountId: '', locationId: '' },
-    { storeName: '新宿店', clientEmail: '', privateKey: '', accountId: '', locationId: '' },
+    { storeName: '渋谷店', oauthClientId: '', oauthClientSecret: '', refreshToken: '', locationId: '' },
+    { storeName: '表参道店', oauthClientId: '', oauthClientSecret: '', refreshToken: '', locationId: '' },
+    { storeName: '新宿店', oauthClientId: '', oauthClientSecret: '', refreshToken: '', locationId: '' },
   ],
 }
 
@@ -47,6 +47,19 @@ function loadSettings(): ApiSettings {
     }
     if (parsed.gbp && !Array.isArray(parsed.gbp)) {
       parsed.gbp = [{ storeName: '店舗1', ...parsed.gbp }]
+    }
+    // Migration: convert old GA4 fields (clientEmail+privateKey) to serviceAccountJson
+    if (parsed.ga4 && 'clientEmail' in parsed.ga4 && !('serviceAccountJson' in parsed.ga4)) {
+      parsed.ga4 = { propertyId: parsed.ga4.propertyId || '', serviceAccountJson: '' }
+    }
+    // Migration: convert old GBP fields (clientEmail+privateKey) to OAuth fields
+    if (Array.isArray(parsed.gbp)) {
+      parsed.gbp = parsed.gbp.map((s: Record<string, string>) => {
+        if ('clientEmail' in s && !('oauthClientId' in s)) {
+          return { storeName: s.storeName || '', oauthClientId: '', oauthClientSecret: '', refreshToken: '', locationId: s.locationId || '' }
+        }
+        return s
+      })
     }
     return {
       ...defaultSettings,
