@@ -4,6 +4,9 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Cookie/ヘッダーが大きいリクエストを許容
+    large_client_header_buffers 4 32k;
+
     # API requests -> backend (APIキーをヘッダーに注入)
     location /api/ {
         proxy_pass http://backend:8000;
@@ -14,8 +17,22 @@ server {
         proxy_set_header X-API-Key "${BACKEND_API_KEY}";
     }
 
+    # Cache static assets with hashed filenames aggressively
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Never cache index.html (SPA entry point)
+    location = /index.html {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
+    }
+
     # SPA fallback
     location / {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
         try_files $uri $uri/ /index.html;
     }
 }

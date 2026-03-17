@@ -36,16 +36,35 @@ def _migrate_stores_table(conn):
     existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(stores)").fetchall()}
     new_columns = {
         "instagram_access_token": "TEXT DEFAULT ''",
+        "instagram_app_secret": "TEXT DEFAULT ''",
         "line_channel_access_token": "TEXT DEFAULT ''",
         "ga4_service_account_json": "TEXT DEFAULT ''",
         "gbp_oauth_client_id": "TEXT DEFAULT ''",
         "gbp_oauth_client_secret": "TEXT DEFAULT ''",
         "gbp_oauth_refresh_token": "TEXT DEFAULT ''",
+        "line_oa_email": "TEXT DEFAULT ''",
+        "line_oa_password": "TEXT DEFAULT ''",
+        "line_oa_account_id": "TEXT DEFAULT ''",
+        "line_scraper_schedule": "TEXT DEFAULT ''",
+        "line_scraper_last_run": "TIMESTAMP",
         "credentials_updated_at": "TIMESTAMP",
     }
     for col_name, col_type in new_columns.items():
         if col_name not in existing_cols:
             conn.execute(f"ALTER TABLE stores ADD COLUMN {col_name} {col_type}")
+
+
+def _migrate_line_message_metrics_table(conn):
+    """line_message_metrics テーブルにコンテンツ列を追加（マイグレーション）."""
+    existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(line_message_metrics)").fetchall()}
+    new_columns = {
+        "title": "TEXT",
+        "body_preview": "TEXT",
+        "message_type": "TEXT DEFAULT 'text'",
+    }
+    for col_name, col_type in new_columns.items():
+        if col_name not in existing_cols:
+            conn.execute(f"ALTER TABLE line_message_metrics ADD COLUMN {col_name} {col_type}")
 
 
 def init_db():
@@ -115,7 +134,8 @@ def init_db():
                 unique_impressions INTEGER DEFAULT 0,
                 unique_clicks INTEGER DEFAULT 0,
                 unique_media_played INTEGER DEFAULT 0,
-                FOREIGN KEY (store_id) REFERENCES stores(id)
+                FOREIGN KEY (store_id) REFERENCES stores(id),
+                UNIQUE(date, store_id, request_id)
             );
 
             CREATE TABLE IF NOT EXISTS ga4_metrics (
@@ -177,6 +197,12 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_gbp_date_store ON gbp_metrics(date, store_id);
         """)
         _migrate_stores_table(conn)
+        _migrate_line_message_metrics_table(conn)
+        # line_message_metrics にユニークインデックス追加（既存テーブル対応）
+        conn.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_line_msg_date_store_req
+            ON line_message_metrics(date, store_id, request_id)
+        """)
         # instagram_posts に media_product_type カラムを追加（マイグレーション）
         existing_post_cols = {row[1] for row in conn.execute("PRAGMA table_info(instagram_posts)").fetchall()}
         if "media_product_type" not in existing_post_cols:
@@ -330,15 +356,17 @@ def upsert_ga4_page(data: dict):
 
 
 def insert_line_message_metrics(data: dict):
-    """LINEメッセージ配信メトリクスを挿入."""
+    """LINEメッセージ配信メトリクスをupsert（date + store_id + request_id で重複判定）."""
     with get_connection() as conn:
         cols = list(data.keys())
         col_str = ", ".join(cols)
         placeholders = ", ".join("?" for _ in cols)
-        conn.execute(
-            f"INSERT INTO line_message_metrics ({col_str}) VALUES ({placeholders})",
-            tuple(data.values()),
-        )
+        update_cols = [c for c in cols if c not in ("date", "store_id", "request_id")]
+        update_str = ", ".join(f"{c} = excluded.{c}" for c in update_cols)
+        sql = f"INSERT INTO line_message_metrics ({col_str}) VALUES ({placeholders})"
+        if update_str:
+            sql += f" ON CONFLICT(date, store_id, request_id) DO UPDATE SET {update_str}"
+        conn.execute(sql, tuple(data.values()))
 
 
 # ---- クエリ関数 ----

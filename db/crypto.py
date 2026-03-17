@@ -14,8 +14,11 @@ logger = logging.getLogger(__name__)
 # 暗号化対象のカラム名
 CREDENTIAL_FIELDS = frozenset({
     "instagram_access_token",
+    "instagram_app_secret",
     "line_channel_token",
     "line_channel_access_token",
+    "line_oa_email",
+    "line_oa_password",
     "ga4_service_account_json",
     "gbp_oauth_client_id",
     "gbp_oauth_client_secret",

@@ -1,5 +1,4 @@
 import type { InstagramInsight, InstagramPost } from '@/types/instagram'
-import type { LineFollowerInsight, LineMessageInsight, LineDemographic } from '@/types/line'
 import type { GA4Metric, GA4TrafficSource, GA4Page, GA4Demographic, GA4HourlySession } from '@/types/ga4'
 import type { GBPMetric, GBPReview, GBPRatingDistribution, GBPHourlyAction } from '@/types/gbp'
 
@@ -82,40 +81,6 @@ function generatePostsForMonth(month: string): InstagramPost[] {
 }
 
 export const mockInstagramPosts: InstagramPost[] = generatePostsForMonth(
-  months6[months6.length - 1],
-)
-
-export const mockLineFollowers: LineFollowerInsight[] = months6.map((date, i) => ({
-  date,
-  followers: 8900 + i * 180 + Math.floor(Math.random() * 50),
-  targeted_reaches: 6500 + i * 200 + Math.floor(Math.random() * 400),
-  blocks: 120 + i * 5 + Math.floor(Math.random() * 10),
-}))
-
-/** Generate LINE messages for a specific month */
-function generateMessagesForMonth(month: string): LineMessageInsight[] {
-  const rand = seededRandom(monthSeed(month) + 999)
-  const [y, m] = month.split('-').map(Number)
-  const count = 3 + Math.floor(rand() * 3) // 3-5 messages per month
-
-  return Array.from({ length: count }, (_, i) => {
-    const day = 1 + i * 7 + Math.floor(rand() * 3)
-    const delivered = 7500 + Math.floor(rand() * 1000)
-    const impressions = Math.floor(delivered * (0.6 + rand() * 0.2))
-    const dateObj = new Date(y, m - 1, Math.min(day, 28))
-    const hour = [10, 11, 17, 18][Math.floor(rand() * 4)] // ランチ前・ディナー前中心
-    return {
-      date: `${y}-${String(m).padStart(2, '0')}-${String(Math.min(day, 28)).padStart(2, '0')}`,
-      delivered,
-      unique_impressions: impressions,
-      unique_clicks: Math.floor(impressions * (0.08 + rand() * 0.12)),
-      hour,
-      day_of_week: (dateObj.getDay() + 6) % 7, // Monday=0
-    }
-  })
-}
-
-export const mockLineMessages: LineMessageInsight[] = generateMessagesForMonth(
   months6[months6.length - 1],
 )
 
@@ -237,28 +202,6 @@ function generateGBPHourlyActions(month: string): GBPHourlyAction[] {
   return data
 }
 
-export const mockLineDemographic: LineDemographic = {
-  genders: [
-    { label: '女性', percentage: 58.2 },
-    { label: '男性', percentage: 38.5 },
-    { label: '不明', percentage: 3.3 },
-  ],
-  ages: [
-    { label: '~19', percentage: 2.1 },
-    { label: '20-29', percentage: 18.4 },
-    { label: '30-39', percentage: 28.7 },
-    { label: '40-49', percentage: 24.3 },
-    { label: '50~', percentage: 26.5 },
-  ],
-  areas: [
-    { label: '東京', percentage: 35.2 },
-    { label: '神奈川', percentage: 18.6 },
-    { label: '千葉', percentage: 12.4 },
-    { label: '埼玉', percentage: 10.8 },
-    { label: 'その他', percentage: 23.0 },
-  ],
-}
-
 /** Store-specific scale factors — each store has different traffic/engagement levels */
 const STORE_PROFILES = [
   { scale: 1.0, label: '渋谷店' },     // flagship
@@ -339,11 +282,11 @@ export function getMockDataForMonth(month: string, storeIndex = 0) {
       posts: generatePostsForMonth(month),
     },
     line: {
-      current: mockLineFollowers[currentIdx],
-      previous: mockLineFollowers[prevIdx],
-      trend: mockLineFollowers,
-      messages: generateMessagesForMonth(month),
-      demographic: mockLineDemographic,
+      current: { date: months6[currentIdx], followers: 0, targeted_reaches: 0, blocks: 0 },
+      previous: { date: months6[prevIdx], followers: 0, targeted_reaches: 0, blocks: 0 },
+      trend: [],
+      messages: [],
+      demographic: { genders: [], ages: [], areas: [] },
     },
     ga4: {
       current: mockGA4Metrics[currentIdx],

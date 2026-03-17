@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback, Fragment } from 'react'
+import { Link } from 'react-router-dom'
 import {
   AreaChart,
   Area,
@@ -22,6 +23,7 @@ import { LineIcon } from '@/components/common/BrandIcons'
 import KpiCard from '@/components/common/KpiCard'
 import TrendBadge from '@/components/common/TrendBadge'
 import PageSizeSelector from '@/components/common/PageSizeSelector'
+import type { LineMessageType } from '@/types/line'
 import { useMonth } from '@/hooks/useMonth'
 import { usePeriod } from '@/hooks/usePeriod'
 import { useDashboardData } from '@/hooks/useDashboardData'
@@ -52,17 +54,33 @@ const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
 const HOUR_LABELS = ['8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21']
 
 const DEMO_COLORS = ['#00B900', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6']
+const GENDER_COLORS = ['#3B82F6', '#EC4899', '#9CA3AF'] // male, female, other
+const AREA_COLORS = ['#00B900', '#3B82F6', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#EF4444', '#64748B']
+
+const MSG_TYPE_CONFIG: Record<LineMessageType, { label: string; color: string; icon: string }> = {
+  text: { label: 'テキスト', color: '#6B7280', icon: 'chat_bubble' },
+  image: { label: '画像', color: '#3B82F6', icon: 'image' },
+  rich: { label: 'リッチ', color: '#22C55E', icon: 'dashboard' },
+  coupon: { label: 'クーポン', color: '#F59E0B', icon: 'confirmation_number' },
+  video: { label: '動画', color: '#8B5CF6', icon: 'play_circle' },
+  card: { label: 'カード', color: '#06B6D4', icon: 'web_stories' },
+}
 
 export default function Line() {
   const { selectedMonth } = useMonth()
   const { periodType, effectiveStart, effectiveEnd } = usePeriod()
-  const { data: allData } = useDashboardData(selectedMonth)
+  const { data: allData, loading } = useDashboardData(selectedMonth)
   const data = allData.line
 
   const current = data.current
   const previous = data.previous
   const trend = data.trend
   const demographic = data.demographic
+
+  // APIからデータが取得できていない場合（全てゼロ or 空配列）
+  const hasFollowerData = trend.length > 0 || current.followers > 0
+  const hasMessageData = data.messages.length > 0
+  const hasAnyData = hasFollowerData || hasMessageData
 
   // Filter messages by the effective date range
   const allMessages = data.messages
@@ -82,8 +100,6 @@ export default function Line() {
   const totalClicks = messages.reduce((acc, m) => acc + m.unique_clicks, 0)
   const openRate = totalDelivered > 0 ? (totalImpressions / totalDelivered) * 100 : 0
   const clickRate = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
-  const prevOpenRate = openRate * 0.95
-
   const avgOpenRate = messages.length > 0
     ? messages.reduce((acc, m) => acc + (m.delivered > 0 ? (m.unique_impressions / m.delivered) * 100 : 0), 0) / messages.length
     : 0
@@ -101,6 +117,10 @@ export default function Line() {
     : -1
 
   const [msgPageSize, setMsgPageSize] = useState(10)
+  const [expandedMsgIdx, setExpandedMsgIdx] = useState<number | null>(null)
+  const toggleExpand = useCallback((idx: number) => {
+    setExpandedMsgIdx((prev) => (prev === idx ? null : idx))
+  }, [])
   const displayedMessages = messages.slice(0, msgPageSize)
 
   const chartData = trend.map((item) => ({
@@ -150,9 +170,45 @@ export default function Line() {
       .map(([week, count]) => ({ week: `${week}~`, count }))
   }, [messages])
 
+  // Sort age data ascending by the starting age number
+  const sortedAges = useMemo(() => {
+    return [...demographic.ages].sort((a, b) => {
+      const aNum = parseInt(a.label.replace(/[^\d]/g, ''), 10) || 0
+      const bNum = parseInt(b.label.replace(/[^\d]/g, ''), 10) || 0
+      return aNum - bNum
+    })
+  }, [demographic.ages])
+
+  // Index of the highest percentage age group (for highlight)
+  const topAgeIdx = useMemo(() => {
+    let maxIdx = 0
+    for (let i = 1; i < sortedAges.length; i++) {
+      if (sortedAges[i].percentage > sortedAges[maxIdx].percentage) maxIdx = i
+    }
+    return maxIdx
+  }, [sortedAges])
+
   return (
     <div className="animate-in fade-in duration-400">
       <Header title="LINE公式アカウント 分析" brandIcon={<LineIcon size={22} />} color="#00B900" lightBg="#E6F9E6" reportType="line" />
+
+      {!loading && !hasAnyData && (
+        <div className="mb-6 rounded-xl border border-border bg-card p-6 text-center">
+          <span className="material-symbols-rounded text-4xl text-muted-foreground mb-2 block">link_off</span>
+          <p className="text-sm font-medium text-foreground mb-1">LINEデータがありません</p>
+          <p className="text-xs text-muted-foreground mb-4">
+            LINE Messaging API の Channel Access Token を設定して接続テストを実行すると、友だち数・配信データが自動取得されます。
+          </p>
+          <Link
+            to="/settings"
+            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
+            style={{ backgroundColor: LINE_GREEN }}
+          >
+            <span className="material-symbols-rounded text-base">settings</span>
+            API設定へ
+          </Link>
+        </div>
+      )}
 
       {/* Friends KPI Cards */}
       <section className="mb-6 md:mb-8">
@@ -449,6 +505,8 @@ export default function Line() {
                 <table className="w-full text-xs md:text-[13px]">
                   <thead>
                     <tr className="border-b border-border">
+                      <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground font-medium whitespace-nowrap">種別</th>
+                      <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground font-medium whitespace-nowrap hidden sm:table-cell">タイトル</th>
                       {['配信日時', '配信数', '開封数', 'クリック数', '開封率', 'クリック率'].map((h) => (
                         <th key={h} className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground font-medium whitespace-nowrap">
                           {h}
@@ -461,8 +519,28 @@ export default function Line() {
                       const rowOpenRate = m.delivered > 0 ? (m.unique_impressions / m.delivered) * 100 : 0
                       const rowClickRate = m.unique_impressions > 0 ? (m.unique_clicks / m.unique_impressions) * 100 : 0
                       const isTop = i === topMsgIdx || (messages.indexOf(m) === topMsgIdx)
+                      const isExpanded = expandedMsgIdx === i
+                      const typeConfig = MSG_TYPE_CONFIG[m.message_type ?? 'text']
                       return (
-                        <tr key={i} className={`hover:bg-muted/50 transition-colors ${isTop ? 'bg-green-50/50' : ''}`}>
+                        <Fragment key={i}>
+                        <tr
+                          className={`hover:bg-muted/50 transition-colors cursor-pointer ${isTop ? 'bg-green-50/50' : ''} ${isExpanded ? 'bg-muted/30' : ''}`}
+                          onClick={() => toggleExpand(i)}
+                        >
+                          {/* 種別バッジ */}
+                          <td className="p-2 md:p-3 border-b border-border whitespace-nowrap">
+                            <span
+                              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white"
+                              style={{ backgroundColor: typeConfig.color }}
+                            >
+                              <span className="material-symbols-rounded text-[14px] leading-none sm:hidden">{typeConfig.icon}</span>
+                              <span className="hidden sm:inline">{typeConfig.label}</span>
+                            </span>
+                          </td>
+                          {/* タイトル（モバイル非表示） */}
+                          <td className="p-2 md:p-3 border-b border-border text-foreground hidden sm:table-cell max-w-[200px]">
+                            <span className="line-clamp-1">{m.title ?? '-'}</span>
+                          </td>
                           <td className="p-2 md:p-3 border-b border-border text-foreground whitespace-nowrap">
                             {isTop && (
                               <span className="inline-block mr-1 rounded-full px-1.5 py-0 text-[10px] font-bold" style={{ background: '#E6F9E6', color: LINE_GREEN }}>
@@ -487,12 +565,48 @@ export default function Line() {
                             </span>
                           </td>
                         </tr>
+                        {/* 展開行 */}
+                        {isExpanded && (
+                          <tr className="bg-muted/20">
+                            <td colSpan={8} className="p-3 md:p-4 border-b border-border">
+                              <div className="flex flex-col gap-2 text-sm">
+                                {/* モバイルではタイトルも表示 */}
+                                {m.title && (
+                                  <div>
+                                    <span className="text-xs font-semibold text-muted-foreground mr-2">タイトル:</span>
+                                    <span className="text-foreground font-medium">{m.title}</span>
+                                  </div>
+                                )}
+                                {m.body_preview && (
+                                  <div>
+                                    <span className="text-xs font-semibold text-muted-foreground mr-2">本文:</span>
+                                    <span className="text-foreground">{m.body_preview}</span>
+                                  </div>
+                                )}
+                                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mt-1">
+                                  <span className="inline-flex items-center gap-1">
+                                    <span
+                                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white"
+                                      style={{ backgroundColor: typeConfig.color }}
+                                    >
+                                      {typeConfig.label}
+                                    </span>
+                                  </span>
+                                  <span>配信日: {m.date}</span>
+                                  <span>時刻: {String(m.hour).padStart(2, '0')}:00</span>
+                                  <span>曜日: {DAY_LABELS[m.day_of_week]}</span>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </Fragment>
                       )
                     })}
                   </tbody>
                   <tfoot>
                     <tr className="bg-muted/30">
-                      <td className="p-2 md:p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">合計 / 平均</td>
+                      <td colSpan={3} className="p-2 md:p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">合計 / 平均</td>
                       <td className="p-2 md:p-3 text-sm font-bold text-foreground">{formatNumber(totalDelivered)}</td>
                       <td className="p-2 md:p-3 text-sm font-bold text-foreground">{formatNumber(totalImpressions)}</td>
                       <td className="p-2 md:p-3 text-sm font-bold text-foreground">{formatNumber(totalClicks)}</td>
@@ -593,10 +707,10 @@ export default function Line() {
           友だち属性分析
         </h3>
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-          {/* Gender */}
+          {/* Gender - Donut Chart */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <h4 className="mb-3 text-xs font-semibold text-muted-foreground">性別分布</h4>
-            <div className="h-[200px]">
+            <div className="h-[180px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -605,56 +719,67 @@ export default function Line() {
                     nameKey="label"
                     cx="50%"
                     cy="50%"
-                    outerRadius={70}
-                    label={({ label, percentage }) => `${label} ${percentage}%`}
+                    innerRadius={45}
+                    outerRadius={75}
+                    paddingAngle={2}
+                    label={false}
                   >
                     {demographic.genders.map((_, i) => (
-                      <Cell key={i} fill={DEMO_COLORS[i % DEMO_COLORS.length]} />
+                      <Cell key={i} fill={GENDER_COLORS[i] ?? DEMO_COLORS[i % DEMO_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => [`${value}%`]} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
+            {/* Legend below chart */}
+            <div className="flex justify-center gap-6 mt-2">
+              {demographic.genders.map((g, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: GENDER_COLORS[i] ?? DEMO_COLORS[i % DEMO_COLORS.length] }} />
+                  <span className="text-sm font-semibold text-foreground">{g.label}</span>
+                  <span className="text-sm font-bold" style={{ color: GENDER_COLORS[i] ?? DEMO_COLORS[i % DEMO_COLORS.length] }}>{g.percentage}%</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Age */}
+          {/* Age - Horizontal Bar (sorted ascending by age) */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <h4 className="mb-3 text-xs font-semibold text-muted-foreground">年齢分布</h4>
-            <div className="h-[200px]">
+            <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={demographic.ages} layout="vertical" margin={{ left: 10, right: 20 }}>
+                <BarChart data={sortedAges} layout="vertical" margin={{ left: 8, right: 30 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} horizontal={false} />
-                  <XAxis type="number" unit="%" tick={{ fill: TICK_COLOR, fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="label" tick={{ fill: TICK_COLOR, fontSize: 11 }} axisLine={false} tickLine={false} width={40} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => [`${value}%`]} />
-                  <Bar dataKey="percentage" name="割合" fill={LINE_GREEN} radius={[0, 4, 4, 0]} />
+                  <XAxis type="number" unit="%" tick={{ fill: TICK_COLOR, fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
+                  <YAxis type="category" dataKey="label" tick={{ fill: TICK_COLOR, fontSize: 11 }} axisLine={false} tickLine={false} width={60} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => [`${value}%`, '割合']} />
+                  <Bar dataKey="percentage" name="割合" fill={LINE_GREEN} radius={[0, 4, 4, 0]}>
+                    {sortedAges.map((_, i) => (
+                      <Cell key={i} fill={i === topAgeIdx ? LINE_GREEN : '#86EFAC'} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Area */}
+          {/* Area - Horizontal Bar Chart */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <h4 className="mb-3 text-xs font-semibold text-muted-foreground">地域分布</h4>
-            <div className="h-[200px]">
+            <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={demographic.areas}
-                    dataKey="percentage"
-                    nameKey="label"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={70}
-                    label={({ label, percentage }) => `${label} ${percentage}%`}
-                  >
+                <BarChart data={demographic.areas} layout="vertical" margin={{ left: 8, right: 30 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} horizontal={false} />
+                  <XAxis type="number" unit="%" tick={{ fill: TICK_COLOR, fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
+                  <YAxis type="category" dataKey="label" tick={{ fill: TICK_COLOR, fontSize: 12, fontWeight: 500 }} axisLine={false} tickLine={false} width={50} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => [`${value}%`, '割合']} />
+                  <Bar dataKey="percentage" name="割合" radius={[0, 4, 4, 0]}>
                     {demographic.areas.map((_, i) => (
-                      <Cell key={i} fill={DEMO_COLORS[i % DEMO_COLORS.length]} />
+                      <Cell key={i} fill={AREA_COLORS[i] ?? '#86EFAC'} />
                     ))}
-                  </Pie>
-                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => [`${value}%`]} />
-                </PieChart>
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </div>

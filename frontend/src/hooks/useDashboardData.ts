@@ -10,6 +10,7 @@ import {
   fetchInstagramPosts,
   fetchLineMetrics,
   fetchLineMessages,
+  fetchLineDemographics,
   fetchGA4Metrics,
   fetchGA4TrafficSources,
   fetchGA4Pages,
@@ -29,16 +30,32 @@ interface UseDashboardDataResult {
   stores: Store[]
 }
 
+/** Build initial data with empty LINE defaults (no mock for LINE). */
+function getInitialData(month: string, storeIndex: number): DashboardData {
+  const mock = getMockDataForMonth(month, storeIndex)
+  const emptyInsight = { date: month, followers: 0, targeted_reaches: 0, blocks: 0 }
+  return {
+    ...mock,
+    line: {
+      current: emptyInsight,
+      previous: emptyInsight,
+      trend: [],
+      messages: [],
+      demographic: mock.line.demographic,
+    },
+  }
+}
+
 /**
  * Fetch data for a given month and store index.
- * Falls back to mock data if the API is unavailable.
+ * LINE uses real API data only (no mock fallback).
  */
 export function useDashboardData(
   selectedMonth: string,
   storeIndex = 0,
 ): UseDashboardDataResult {
   const [data, setData] = useState<DashboardData>(() =>
-    getMockDataForMonth(selectedMonth, storeIndex),
+    getInitialData(selectedMonth, storeIndex),
   )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -64,8 +81,8 @@ export function useDashboardData(
         setStores(storeList)
 
         if (storeList.length === 0) {
-          // No stores in DB - use mock data
-          setData(getMockDataForMonth(selectedMonth, storeIndex))
+          // No stores in DB - use initial data (LINE empty, others mock)
+          setData(getInitialData(selectedMonth, storeIndex))
           setLoading(false)
           return
         }
@@ -81,6 +98,7 @@ export function useDashboardData(
           igPosts,
           lineMetricsRaw,
           lineMessagesRaw,
+          lineDemoData,
           ga4MetricsRaw,
           ga4Sources,
           ga4Pages,
@@ -90,6 +108,7 @@ export function useDashboardData(
           fetchInstagramPosts(storeId, 50),
           fetchLineMetrics(storeId, start6, end),
           fetchLineMessages(storeId, currentStart, currentEnd),
+          fetchLineDemographics(storeId),
           fetchGA4Metrics(storeId, start6, end),
           fetchGA4TrafficSources(storeId, currentStart, currentEnd),
           fetchGA4Pages(storeId, currentStart, currentEnd),
@@ -99,8 +118,10 @@ export function useDashboardData(
         if (cancelled) return
 
         // Aggregate daily data into monthly for trend display
-        const igMonthly = aggregateMonthly(igMetricsRaw, 'date', [])
-        const lineMonthly = aggregateMonthly(lineMetricsRaw, 'date', [])
+        // Note: snapshot/cumulative fields (followers, blocks, followers_count) must use
+        // the last value of the month, not a sum. Pass them as lastFields.
+        const igMonthly = aggregateMonthly(igMetricsRaw, 'date', [], ['followers_count'])
+        const lineMonthly = aggregateMonthly(lineMetricsRaw, 'date', [], ['followers', 'blocks'])
         const ga4Monthly = aggregateMonthly(ga4MetricsRaw, 'date', ['bounce_rate', 'avg_session_duration'])
         const gbpMonthly = aggregateMonthly(gbpMetricsRaw, 'date', [])
 
@@ -118,17 +139,20 @@ export function useDashboardData(
         const gbpCurrent = gbpMonthly.find((m) => m.date === selectedMonth)
         const gbpPrevious = gbpMonthly.find((m) => m.date === igPrevMonth)
 
-        // If we have no data from the API at all, fall back to mock
+        // If we have no data from the API at all, use initial defaults
         const hasData = igMonthly.length > 0 || lineMonthly.length > 0 ||
           ga4Monthly.length > 0 || gbpMonthly.length > 0
         if (!hasData) {
-          setData(getMockDataForMonth(selectedMonth, storeIndex))
+          setData(getInitialData(selectedMonth, storeIndex))
           setLoading(false)
           return
         }
 
-        // Use mock data as defaults for missing pieces
+        // Use mock data as defaults only for fields the API doesn't provide
         const mockData = getMockDataForMonth(selectedMonth, storeIndex)
+
+        // Empty defaults for LINE (no mock fallback)
+        const emptyLineInsight = { date: selectedMonth, followers: 0, targeted_reaches: 0, blocks: 0 }
 
         const result: DashboardData = {
           instagram: {
@@ -138,11 +162,31 @@ export function useDashboardData(
             posts: igPosts.length > 0 ? igPosts : mockData.instagram.posts,
           },
           line: {
-            current: lineCurrent ?? mockData.line.current,
-            previous: linePrevious ?? mockData.line.previous,
-            trend: lineMonthly.length > 0 ? lineMonthly : mockData.line.trend,
-            messages: lineMessagesRaw.length > 0 ? lineMessagesRaw : mockData.line.messages,
-            demographic: mockData.line.demographic, // API doesn't provide demographics
+            current: lineCurrent ?? emptyLineInsight,
+            previous: linePrevious ?? emptyLineInsight,
+            trend: lineMonthly.length > 0 ? lineMonthly : [],
+            messages: lineMessagesRaw,
+            demographic: lineDemoData ? {
+              genders: lineDemoData.genders
+                .filter((g) => g.label !== 'unknown')
+                .map((g) => ({
+                  label: g.label === 'male' ? '男性' : g.label === 'female' ? '女性' : 'その他',
+                  percentage: g.percentage,
+                })),
+              ages: lineDemoData.ages
+                .filter((a) => a.label !== 'unknown' && /^from\d+to\d+$/.test(a.label))
+                .map((a) => ({
+                  label: a.label.replace(/^from(\d+)to(\d+)$/, '$1-$2歳'),
+                  percentage: a.percentage,
+                })),
+              areas: lineDemoData.areas
+                .filter((a) => a.label !== 'unknown')
+                .slice(0, 8)
+                .map((a) => ({
+                  label: a.label,
+                  percentage: a.percentage,
+                })),
+            } : { genders: [], ages: [], areas: [] },
           },
           ga4: {
             current: ga4Current ?? mockData.ga4.current,
@@ -166,9 +210,9 @@ export function useDashboardData(
         setData(result)
       } catch (err) {
         if (cancelled) return
-        console.warn('API fetch failed, using mock data:', err)
+        console.warn('API fetch failed:', err)
         setError(err instanceof Error ? err.message : 'API error')
-        setData(getMockDataForMonth(selectedMonth, storeIndex))
+        setData(getInitialData(selectedMonth, storeIndex))
       } finally {
         if (!cancelled) setLoading(false)
       }

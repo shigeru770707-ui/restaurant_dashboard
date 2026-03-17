@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Header from '@/components/layout/Header'
 import {
   Card,
@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { useApiSettings } from '@/hooks/useApiSettings'
 import { testInstagram, testLine, testGA4, testGBP } from '@/utils/apiTest'
-import { saveCredentials } from '@/utils/api'
+import { saveCredentials, postJson, fetchCredentialsSummary } from '@/utils/api'
 import type { ConnectionStatus, ConnectionTestResult } from '@/types/settings'
 
 function StatusIndicator({
@@ -98,6 +98,8 @@ export default function Settings() {
   // Single statuses for LINE / GA4
   const [lineStatus, setLineStatus] = useState<ConnectionStatus>('untested')
   const [lineMsg, setLineMsg] = useState('')
+  const ga4FileRef = useRef<HTMLInputElement>(null)
+  const ga4ParsedRef = useRef<Record<string, unknown> | null>(null)
   const [ga4Status, setGa4Status] = useState<ConnectionStatus>('untested')
   const [ga4Msg, setGa4Msg] = useState('')
 
@@ -107,11 +109,110 @@ export default function Settings() {
 
   const [saved, setSaved] = useState(false)
 
+  // LINE scraper control panel state
+  const [scraperStatus, setScraperStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle')
+  const [scraperMsg, setScraperMsg] = useState('')
+  const [scraperSchedule, setScraperSchedule] = useState('')
+  const [scraperLastRun, setScraperLastRun] = useState<string | null>(null)
+  const [scraperNextRun, setScraperNextRun] = useState<string | null>(null)
+  const [scraperConfigured, setScraperConfigured] = useState(false)
+
+  // DB保存済みの認証情報をロードしてフォームに反映
+  useEffect(() => {
+    fetchCredentialsSummary(1).then((summary) => {
+      if (!summary) return
+      // LINE: DB保存済みトークンがあり、localStorageに未設定ならDBの値を使う
+      if (summary.line_channel_access_token_raw && !settings.line.channelAccessToken) {
+        updateLine({ channelAccessToken: summary.line_channel_access_token_raw })
+      }
+      if (summary.line_oa_email && !settings.line.oaEmail) {
+        updateLine({ oaEmail: summary.line_oa_email })
+      }
+      if (summary.line_oa_account_id && !settings.line.oaAccountId) {
+        updateLine({ oaAccountId: summary.line_oa_account_id })
+      }
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    fetch('/api/line-scraper/status?store_id=1')
+      .then((r) => r.json())
+      .then((data: { configured: boolean; schedule: string; last_run: string | null; next_run: string | null }) => {
+        setScraperConfigured(data.configured)
+        setScraperSchedule(data.schedule || '')
+        setScraperLastRun(data.last_run)
+        setScraperNextRun(data.next_run)
+      })
+      .catch(() => {})
+  }, [])
+
+  const handleScraperRun = async () => {
+    setScraperStatus('running')
+    setScraperMsg('')
+    try {
+      const result = await postJson<{ ok: boolean; message: string }>('/api/line-scraper/run', { store_id: 1 })
+      setScraperStatus(result.ok ? 'success' : 'error')
+      setScraperMsg(result.message)
+      if (result.ok) {
+        setScraperLastRun(new Date().toISOString())
+      }
+    } catch (e) {
+      setScraperStatus('error')
+      setScraperMsg(`実行エラー: ${e}`)
+    }
+  }
+
+  const handleScraperScheduleSave = async () => {
+    try {
+      const result = await postJson<{ ok: boolean; message: string }>('/api/line-scraper/schedule', {
+        store_id: 1,
+        schedule: scraperSchedule,
+      })
+      setScraperMsg(result.message)
+      setScraperStatus(result.ok ? 'success' : 'error')
+    } catch (e) {
+      setScraperMsg(`保存エラー: ${e}`)
+      setScraperStatus('error')
+    }
+  }
+
   const handleTestIg = async (index: number) => {
     setIgStatuses((p) => ({ ...p, [index]: 'testing' }))
     const result: ConnectionTestResult = await testInstagram(settings.instagram[index])
     setIgStatuses((p) => ({ ...p, [index]: result.status }))
     setIgMessages((p) => ({ ...p, [index]: result.message }))
+
+    if (result.status === 'success') {
+      try {
+        const store = settings.instagram[index]
+        const storeId = index + 1
+        const credsToSave: Record<string, string> = {
+          instagram_user_id: store.userId,
+          instagram_access_token: store.accessToken,
+        }
+        if (store.appSecret) credsToSave.instagram_app_secret = store.appSecret
+        await saveCredentials(storeId, credsToSave)
+        saveSettings(settings)
+        setIgMessages((p) => ({ ...p, [index]: '接続成功！認証情報を保存しました。データを取得中...' }))
+
+        const fetchResult = await postJson<{ ok: boolean; message: string }>('/api/fetch/instagram', {
+          user_id: store.userId,
+          access_token: store.accessToken,
+          app_secret: store.appSecret || undefined,
+          store_id: storeId,
+          days: 30,
+        })
+        setIgMessages((p) => ({
+          ...p,
+          [index]: fetchResult.ok
+            ? fetchResult.message
+            : `認証情報は保存済み。データ取得エラー: ${fetchResult.message}`,
+        }))
+      } catch (e) {
+        console.warn('Auto-save/fetch failed:', e)
+        setIgMessages((p) => ({ ...p, [index]: '接続成功（自動保存またはデータ取得に失敗しました）' }))
+      }
+    }
   }
 
   const handleTestLine = async () => {
@@ -119,13 +220,64 @@ export default function Settings() {
     const result = await testLine(settings.line)
     setLineStatus(result.status)
     setLineMsg(result.message)
+
+    if (result.status === 'success') {
+      try {
+        await saveCredentials(1, {
+          line_channel_access_token: settings.line.channelAccessToken,
+        })
+        saveSettings(settings)
+        setLineMsg('接続成功！認証情報を保存しました。データを取得中...')
+
+        const fetchResult = await postJson<{ ok: boolean; message: string }>('/api/fetch/line', {
+          channel_access_token: settings.line.channelAccessToken,
+          store_id: 1,
+          days: 30,
+        })
+        setLineMsg(fetchResult.ok
+          ? fetchResult.message
+          : `認証情報は保存済み。データ取得エラー: ${fetchResult.message}`)
+      } catch (e) {
+        console.warn('Auto-save/fetch failed:', e)
+        setLineMsg('接続成功（自動保存またはデータ取得に失敗しました）')
+      }
+    }
   }
 
   const handleTestGA4 = async () => {
     setGa4Status('testing')
-    const result = await testGA4(settings.ga4)
+    const result = await testGA4(settings.ga4, ga4ParsedRef.current)
     setGa4Status(result.status)
     setGa4Msg(result.message)
+
+    // On success: auto-save credentials + trigger data fetch
+    const parsed = result.parsedJson
+    if (result.status === 'success' && parsed) {
+      try {
+        // Save credentials to backend DB
+        await saveCredentials(1, {
+          ga4_property_id: settings.ga4.propertyId,
+          ga4_service_account_json: JSON.stringify(parsed),
+        })
+        // Also save to localStorage
+        saveSettings(settings)
+        setGa4Msg('接続成功！認証情報を保存しました。GA4データを取得中...')
+
+        // Trigger initial GA4 data fetch (last 30 days)
+        const fetchResult = await postJson<{ ok: boolean; message: string }>('/api/fetch/ga4', {
+          property_id: settings.ga4.propertyId,
+          service_account_json: parsed,
+          store_id: 1,
+          days: 30,
+        })
+        setGa4Msg(fetchResult.ok
+          ? fetchResult.message
+          : `認証情報は保存済み。データ取得エラー: ${fetchResult.message}`)
+      } catch (e) {
+        console.warn('Auto-save/fetch failed:', e)
+        setGa4Msg('接続成功（自動保存またはデータ取得に失敗しました）')
+      }
+    }
   }
 
   const handleTestGbp = async (index: number) => {
@@ -133,6 +285,39 @@ export default function Settings() {
     const result: ConnectionTestResult = await testGBP(settings.gbp[index])
     setGbpStatuses((p) => ({ ...p, [index]: result.status }))
     setGbpMessages((p) => ({ ...p, [index]: result.message }))
+
+    if (result.status === 'success') {
+      try {
+        const store = settings.gbp[index]
+        const storeId = index + 1
+        await saveCredentials(storeId, {
+          gbp_location_id: store.locationId,
+          gbp_oauth_client_id: store.oauthClientId,
+          gbp_oauth_client_secret: store.oauthClientSecret,
+          gbp_oauth_refresh_token: store.refreshToken,
+        })
+        saveSettings(settings)
+        setGbpMessages((p) => ({ ...p, [index]: '接続成功！認証情報を保存しました。データを取得中...' }))
+
+        const fetchResult = await postJson<{ ok: boolean; message: string }>('/api/fetch/gbp', {
+          location_id: store.locationId,
+          oauth_client_id: store.oauthClientId,
+          oauth_client_secret: store.oauthClientSecret,
+          oauth_refresh_token: store.refreshToken,
+          store_id: storeId,
+          days: 30,
+        })
+        setGbpMessages((p) => ({
+          ...p,
+          [index]: fetchResult.ok
+            ? fetchResult.message
+            : `認証情報は保存済み。データ取得エラー: ${fetchResult.message}`,
+        }))
+      } catch (e) {
+        console.warn('Auto-save/fetch failed:', e)
+        setGbpMessages((p) => ({ ...p, [index]: '接続成功（自動保存またはデータ取得に失敗しました）' }))
+      }
+    }
   }
 
   const [saveError, setSaveError] = useState('')
@@ -148,6 +333,15 @@ export default function Settings() {
       if (settings.ga4.serviceAccountJson) ga4Creds.ga4_service_account_json = settings.ga4.serviceAccountJson
       if (Object.keys(ga4Creds).length > 0) {
         await saveCredentials(1, ga4Creds)
+      }
+
+      // Save LINE OA scraping credentials
+      const lineCreds: Record<string, string> = {}
+      if (settings.line.oaEmail) lineCreds.line_oa_email = settings.line.oaEmail
+      if (settings.line.oaPassword) lineCreds.line_oa_password = settings.line.oaPassword
+      if (settings.line.oaAccountId) lineCreds.line_oa_account_id = settings.line.oaAccountId
+      if (Object.keys(lineCreds).length > 0) {
+        await saveCredentials(1, lineCreds)
       }
 
       // Save first GBP store credentials
@@ -233,7 +427,7 @@ export default function Settings() {
                     )}
                   </div>
                 </div>
-                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>店舗名</Label>
                     <Input
@@ -241,6 +435,16 @@ export default function Settings() {
                       value={store.storeName}
                       onChange={(e) =>
                         updateInstagramStore(i, { storeName: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Instagram User ID</Label>
+                    <Input
+                      placeholder="17841400000000000"
+                      value={store.userId}
+                      onChange={(e) =>
+                        updateInstagramStore(i, { userId: e.target.value })
                       }
                     />
                   </div>
@@ -256,12 +460,13 @@ export default function Settings() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Instagram User ID</Label>
+                    <Label>App Secret</Label>
                     <Input
-                      placeholder="17841400000000000"
-                      value={store.userId}
+                      type="password"
+                      placeholder="Meta App Secret"
+                      value={store.appSecret}
                       onChange={(e) =>
-                        updateInstagramStore(i, { userId: e.target.value })
+                        updateInstagramStore(i, { appSecret: e.target.value })
                       }
                     />
                   </div>
@@ -296,7 +501,7 @@ export default function Settings() {
               </Button>
             </CardAction>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="line-token">Channel Access Token</Label>
               <Input
@@ -308,8 +513,153 @@ export default function Settings() {
                   updateLine({ channelAccessToken: e.target.value })
                 }
               />
+              <p className="text-xs text-muted-foreground">
+                LINE Messaging API のチャネルアクセストークン（友だち数・属性データ取得用）
+              </p>
             </div>
             <StatusIndicator status={lineStatus} message={lineMsg} />
+
+            <Separator />
+
+            {/* LINE OA Manager スクレイピング設定 */}
+            <div>
+              <h4 className="text-sm font-semibold text-foreground mb-1">
+                LINE OAマネージャー スクレイピング設定
+              </h4>
+              <p className="text-xs text-muted-foreground mb-4">
+                配信メッセージの開封率・クリック率を自動取得するための認証情報です。
+              </p>
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="line-oa-email">LINE Business メールアドレス</Label>
+                  <Input
+                    id="line-oa-email"
+                    type="email"
+                    placeholder="example@company.com"
+                    value={settings.line.oaEmail}
+                    onChange={(e) =>
+                      updateLine({ oaEmail: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="line-oa-password">パスワード</Label>
+                  <Input
+                    id="line-oa-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={settings.line.oaPassword}
+                    onChange={(e) =>
+                      updateLine({ oaPassword: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="mt-4 space-y-2">
+                <Label htmlFor="line-oa-account-id">アカウントID（任意）</Label>
+                <Input
+                  id="line-oa-account-id"
+                  placeholder="例: @restaurant-shibuya"
+                  value={settings.line.oaAccountId}
+                  onChange={(e) =>
+                    updateLine({ oaAccountId: e.target.value })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  manager.line.biz のアカウントID。未入力の場合、最初のアカウントが使用されます。
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* スクレイピング コントロールパネル */}
+            <div>
+              <h4 className="text-sm font-semibold text-foreground mb-1">
+                スクレイピング コントロール
+              </h4>
+              <p className="text-xs text-muted-foreground mb-4">
+                LINE APIデータの手動取得・スケジュール設定
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <div className="flex-1 space-y-2">
+                  <Label>スケジュール</Label>
+                  <div className="flex gap-2">
+                    <select
+                      className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-sm"
+                      value={scraperSchedule}
+                      onChange={(e) => setScraperSchedule(e.target.value)}
+                    >
+                      <option value="">無効</option>
+                      <option value="0 4 * * *">毎日 4:00</option>
+                      <option value="0 8 * * *">毎日 8:00</option>
+                      <option value="0 12 * * *">毎日 12:00</option>
+                      <option value="0 20 * * *">毎日 20:00</option>
+                    </select>
+                    <Button variant="outline" size="sm" onClick={handleScraperScheduleSave}>
+                      保存
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border p-3 mb-4 space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground w-20">ステータス:</span>
+                  {scraperConfigured ? (
+                    <span className="flex items-center gap-1 text-success">
+                      <span className="material-symbols-outlined text-sm">check_circle</span>
+                      認証情報設定済み
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <span className="material-symbols-outlined text-sm">info</span>
+                      未設定
+                    </span>
+                  )}
+                </div>
+                {scraperLastRun && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground w-20">最終実行:</span>
+                    <span>{new Date(scraperLastRun).toLocaleString('ja-JP')}</span>
+                  </div>
+                )}
+                {scraperNextRun && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground w-20">次回予定:</span>
+                    <span>{new Date(scraperNextRun).toLocaleString('ja-JP')}</span>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={handleScraperRun}
+                disabled={scraperStatus === 'running'}
+              >
+                {scraperStatus === 'running' ? (
+                  <>
+                    <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
+                    実行中...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-base">play_arrow</span>
+                    今すぐ実行
+                  </>
+                )}
+              </Button>
+
+              {scraperMsg && (
+                <div className={`mt-2 flex items-center gap-2 text-sm ${scraperStatus === 'error' ? 'text-danger' : 'text-success'}`}>
+                  <span className="material-symbols-outlined text-base">
+                    {scraperStatus === 'error' ? 'error' : 'check_circle'}
+                  </span>
+                  {scraperMsg}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -348,6 +698,44 @@ export default function Settings() {
             </div>
             <div className="mt-4 space-y-2">
               <Label htmlFor="ga4-sa-json">サービスアカウントJSON</Label>
+              <div className="flex gap-2 mb-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => ga4FileRef.current?.click()}
+                >
+                  <span className="material-symbols-outlined text-base">upload_file</span>
+                  JSONファイルを選択
+                </Button>
+                {settings.ga4.serviceAccountJson && (
+                  <span className="text-xs text-green-600 flex items-center">✅ 設定済み</span>
+                )}
+                <input
+                  ref={ga4FileRef}
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      const reader = new FileReader()
+                      reader.onload = (ev) => {
+                        const text = ev.target?.result as string
+                        try {
+                          const parsed = JSON.parse(text)
+                          ga4ParsedRef.current = parsed
+                          updateGA4({ serviceAccountJson: JSON.stringify(parsed, null, 2) })
+                        } catch {
+                          ga4ParsedRef.current = null
+                          updateGA4({ serviceAccountJson: text })
+                        }
+                      }
+                      reader.readAsText(file)
+                    }
+                    e.target.value = ''
+                  }}
+                />
+              </div>
               <Textarea
                 id="ga4-sa-json"
                 placeholder='{"type": "service_account", "project_id": "...", "private_key": "...", "client_email": "...", ...}'
@@ -358,7 +746,7 @@ export default function Settings() {
                 }
               />
               <p className="text-xs text-muted-foreground">
-                Google Cloud Console からダウンロードしたサービスアカウントのJSONキーをそのまま貼り付けてください。
+                JSONファイルをアップロードするか、内容を貼り付けてください。
               </p>
             </div>
             <StatusIndicator status={ga4Status} message={ga4Msg} />

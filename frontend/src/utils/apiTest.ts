@@ -13,20 +13,14 @@ export async function testInstagram(
     return { status: 'error', message: 'Access TokenとUser IDを入力してください' }
   }
   try {
-    const res = await fetch(
-      `https://graph.facebook.com/v21.0/${settings.userId}?fields=id,username&access_token=${settings.accessToken}`
-    )
-    if (!res.ok) {
-      const err = await res.json()
-      return {
-        status: 'error',
-        message: err.error?.message || `HTTPエラー: ${res.status}`,
-      }
-    }
-    const data = await res.json()
+    const data = await postJson<{ ok: boolean; message: string }>('/api/test/instagram', {
+      user_id: settings.userId,
+      access_token: settings.accessToken,
+      app_secret: settings.appSecret || undefined,
+    })
     return {
-      status: 'success',
-      message: `接続成功: @${data.username || data.id}`,
+      status: data.ok ? 'success' : 'error',
+      message: data.message,
     }
   } catch (e) {
     return {
@@ -43,16 +37,12 @@ export async function testLine(
     return { status: 'error', message: 'Channel Access Tokenを入力してください' }
   }
   try {
-    const res = await fetch('https://api.line.me/v2/bot/info', {
-      headers: { Authorization: `Bearer ${settings.channelAccessToken}` },
+    const data = await postJson<{ ok: boolean; message: string }>('/api/test/line', {
+      channel_access_token: settings.channelAccessToken,
     })
-    if (!res.ok) {
-      return { status: 'error', message: `HTTPエラー: ${res.status}` }
-    }
-    const data = await res.json()
     return {
-      status: 'success',
-      message: `接続成功: ${data.basicId || data.displayName || 'Bot確認済み'}`,
+      status: data.ok ? 'success' : 'error',
+      message: data.message,
     }
   } catch (e) {
     return {
@@ -62,23 +52,49 @@ export async function testLine(
   }
 }
 
+export interface GA4TestResult extends ConnectionTestResult {
+  parsedJson?: Record<string, unknown>
+}
+
 export async function testGA4(
-  settings: ApiSettings['ga4']
-): Promise<ConnectionTestResult> {
-  if (!settings.serviceAccountJson || !settings.propertyId) {
+  settings: ApiSettings['ga4'],
+  parsedObject?: Record<string, unknown> | null,
+): Promise<GA4TestResult> {
+  if (!settings.propertyId) {
     return {
       status: 'error',
-      message: 'サービスアカウントJSONとProperty IDを入力してください',
+      message: 'Property IDを入力してください',
+    }
+  }
+  if (!parsedObject && !settings.serviceAccountJson) {
+    return {
+      status: 'error',
+      message: 'サービスアカウントJSONをアップロードしてください',
     }
   }
   try {
+    // Use pre-parsed object if available, otherwise try to parse the string
+    let saInfo: Record<string, unknown>
+    if (parsedObject) {
+      saInfo = parsedObject
+    } else {
+      try {
+        saInfo = JSON.parse(settings.serviceAccountJson)
+      } catch (parseErr) {
+        return {
+          status: 'error',
+          message: `サービスアカウントJSONの解析に失敗: ${parseErr instanceof Error ? parseErr.message : '不明'}。JSONファイルのアップロードをお試しください。`,
+        }
+      }
+    }
     const data = await postJson<{ ok: boolean; message: string }>('/api/test/ga4', {
       property_id: settings.propertyId,
-      service_account_json: settings.serviceAccountJson,
+      service_account_json: saInfo,
     })
     return {
       status: data.ok ? 'success' : 'error',
       message: data.message,
+      parsedJson: data.ok ? saInfo : undefined,
     }
   } catch (e) {
     return {

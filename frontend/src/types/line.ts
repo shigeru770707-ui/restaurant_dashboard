@@ -1,3 +1,5 @@
+export type LineMessageType = 'text' | 'image' | 'rich' | 'coupon' | 'video' | 'card'
+
 export interface LineFollowerInsight {
   date: string
   followers: number
@@ -12,6 +14,9 @@ export interface LineMessageInsight {
   unique_clicks: number
   hour: number
   day_of_week: number
+  title?: string
+  body_preview?: string
+  message_type?: LineMessageType
 }
 
 export interface LineDemographic {

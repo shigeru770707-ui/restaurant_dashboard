@@ -11,6 +11,7 @@ const emptyInstagramStore: InstagramStoreSettings = {
   storeName: '',
   accessToken: '',
   userId: '',
+  appSecret: '',
 }
 
 const emptyGBPStore: GBPStoreSettings = {
@@ -23,16 +24,18 @@ const emptyGBPStore: GBPStoreSettings = {
 
 const defaultSettings: ApiSettings = {
   instagram: [
-    { storeName: '渋谷店', accessToken: '', userId: '' },
-    { storeName: '表参道店', accessToken: '', userId: '' },
-    { storeName: '新宿店', accessToken: '', userId: '' },
+    { storeName: '渋谷店', accessToken: '', userId: '', appSecret: '' },
+    { storeName: '表参道店', accessToken: '', userId: '', appSecret: '' },
+    { storeName: '新宿店', accessToken: '', userId: '', appSecret: '' },
+    { storeName: '海鮮居酒屋魚魯こ', accessToken: 'EAA5a5JU0ZA8wBQyW5Fk5ffXsohLBAEDns9mxa9nvZBzOu6Mf1o8PY7LZAS0uW3K2slC9vRgEwMxD5ZAWoF0cIw2j3dXYYhJ4RJLx15Qiyu31bVfaJJKsFgUXwMLLlKGtoFGsQW4XSgZBF9V9jZCszQr48l9PFxaGV6VlMK9HXCWLXaZCmZCl2lS8tSM7BC9zzAulwPL0sQCS3FAX', userId: '17841407167072499', appSecret: '' },
   ],
-  line: { channelAccessToken: '' },
+  line: { channelAccessToken: '', oaEmail: '', oaPassword: '', oaAccountId: '' },
   ga4: { propertyId: '', serviceAccountJson: '' },
   gbp: [
     { storeName: '渋谷店', oauthClientId: '', oauthClientSecret: '', refreshToken: '', locationId: '' },
     { storeName: '表参道店', oauthClientId: '', oauthClientSecret: '', refreshToken: '', locationId: '' },
     { storeName: '新宿店', oauthClientId: '', oauthClientSecret: '', refreshToken: '', locationId: '' },
+    { storeName: '海鮮居酒屋魚魯こ', oauthClientId: '', oauthClientSecret: '', refreshToken: '', locationId: '' },
   ],
 }
 

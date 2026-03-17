@@ -9,3 +9,4 @@ apscheduler
 pandas
 plotly
 cryptography
+playwright>=1.40

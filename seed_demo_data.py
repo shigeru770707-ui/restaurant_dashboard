@@ -24,6 +24,20 @@ random.seed(42)
 DAYS = 90
 TODAY = date.today()
 
+# 飲食店LINE配信テンプレート10種
+LINE_MSG_TEMPLATES = [
+    {"title": "今週のおすすめランチ", "body_preview": "期間限定！シェフ特製パスタランチセット1,200円。サラダ・ドリンク付き。", "message_type": "rich"},
+    {"title": "週末限定ディナーコース", "body_preview": "金土日限定の特別コース（5,500円）。前菜からデザートまで全6品。", "message_type": "rich"},
+    {"title": "雨の日クーポン", "body_preview": "雨の日ご来店でドリンク1杯サービス！このメッセージをご提示ください。", "message_type": "coupon"},
+    {"title": "新メニュー登場", "body_preview": "季節の食材を使った新メニューが登場しました。旬の味覚をぜひお楽しみください。", "message_type": "text"},
+    {"title": "本日のおすすめ写真", "body_preview": "本日入荷した新鮮な食材で作る特別メニューをご紹介。", "message_type": "image"},
+    {"title": "お誕生日月クーポン", "body_preview": "お誕生日月の方限定！デザートプレートをプレゼント。", "message_type": "coupon"},
+    {"title": "シェフのこだわり動画", "body_preview": "料理長が語るこだわりの食材選びと調理法。動画でご覧ください。", "message_type": "video"},
+    {"title": "テイクアウト始めました", "body_preview": "人気メニューがご自宅でも！テイクアウト限定セットもご用意しています。", "message_type": "card"},
+    {"title": "忘年会・新年会プラン", "body_preview": "飲み放題付きコース4,000円〜。10名以上で幹事様1名無料！", "message_type": "rich"},
+    {"title": "ポイント2倍キャンペーン", "body_preview": "今週末はポイント2倍！お会計時にLINEカードをご提示ください。", "message_type": "coupon"},
+]
+
 
 def _date_str(days_ago: int) -> str:
     return (TODAY - timedelta(days=days_ago)).isoformat()
@@ -81,6 +95,7 @@ def seed():
                 delivered = int(line_followers * random.uniform(0.8, 0.95))
                 opened = int(delivered * random.uniform(0.35, 0.55))
                 clicked = int(opened * random.uniform(0.08, 0.18))
+                tmpl = LINE_MSG_TEMPLATES[(i + store_id) % len(LINE_MSG_TEMPLATES)]
                 insert_line_message_metrics({
                     "date": d,
                     "store_id": store_id,
@@ -89,6 +104,9 @@ def seed():
                     "unique_impressions": opened,
                     "unique_clicks": clicked,
                     "unique_media_played": int(clicked * 0.3),
+                    "title": tmpl["title"],
+                    "body_preview": tmpl["body_preview"],
+                    "message_type": tmpl["message_type"],
                 })
 
             # ---- GA4 ----

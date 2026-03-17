@@ -5,16 +5,28 @@
  */
 
 import type { InstagramInsight, InstagramPost } from '@/types/instagram'
-import type { LineFollowerInsight, LineMessageInsight } from '@/types/line'
+import type { LineFollowerInsight, LineMessageInsight, LineMessageType } from '@/types/line'
 import type { GA4Metric, GA4TrafficSource, GA4Page } from '@/types/ga4'
 import type { GBPMetric } from '@/types/gbp'
 
 const BASE = '/api'
 
+async function handleResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    let detail = `API error: ${res.status}`
+    try {
+      const body = await res.json()
+      if (body.detail) detail = body.detail
+      else if (body.message) detail = body.message
+    } catch { /* ignore parse errors */ }
+    throw new Error(detail)
+  }
+  return res.json()
+}
+
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url)
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
-  return res.json()
+  return handleResponse<T>(res)
 }
 
 export async function postJson<T>(url: string, data: unknown): Promise<T> {
@@ -23,8 +35,7 @@ export async function postJson<T>(url: string, data: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
-  return res.json()
+  return handleResponse<T>(res)
 }
 
 export async function saveCredentials(
@@ -32,6 +43,33 @@ export async function saveCredentials(
   credentials: Record<string, string>,
 ): Promise<{ ok: boolean; message: string }> {
   return postJson(`${BASE}/stores/${storeId}/credentials`, credentials)
+}
+
+export interface CredentialsSummary {
+  line_channel_access_token: string
+  line_channel_access_token_raw: string
+  line_oa_email: string
+  line_oa_password_set: boolean
+  line_oa_account_id: string
+  ga4_property_id: string
+  ga4_service_account_json_set: boolean
+  gbp_location_id: string
+  gbp_oauth_client_id: string
+  gbp_oauth_client_secret_set: boolean
+  gbp_oauth_refresh_token_set: boolean
+  instagram_user_id: string
+  instagram_access_token: string
+  instagram_access_token_raw: string
+}
+
+export async function fetchCredentialsSummary(
+  storeId: number,
+): Promise<CredentialsSummary | null> {
+  try {
+    return await fetchJson<CredentialsSummary>(`${BASE}/stores/${storeId}/credentials-summary`)
+  } catch {
+    return null
+  }
 }
 
 // ---------- stores ----------
@@ -134,8 +172,32 @@ export async function fetchLineMessages(
       unique_clicks: Number(r.unique_clicks ?? 0),
       hour: d.getHours() || 12,
       day_of_week: (d.getDay() + 6) % 7, // Monday=0
+      title: r.title ? String(r.title) : undefined,
+      body_preview: r.body_preview ? String(r.body_preview) : undefined,
+      message_type: r.message_type ? String(r.message_type) as LineMessageType : undefined,
     }
   })
+}
+
+export interface LineDemographicData {
+  available: boolean
+  genders: { label: string; percentage: number }[]
+  ages: { label: string; percentage: number }[]
+  areas: { label: string; percentage: number }[]
+}
+
+export async function fetchLineDemographics(
+  storeId: number,
+): Promise<LineDemographicData | null> {
+  try {
+    const data = await fetchJson<LineDemographicData>(
+      `${BASE}/line/demographics?store_id=${storeId}`,
+    )
+    if (!data.available) return null
+    return data
+  } catch {
+    return null
+  }
 }
 
 // ---------- GA4 ----------
@@ -273,6 +335,7 @@ export function aggregateMonthly<T extends Record<string, unknown>>(
   records: T[],
   dateField = 'date',
   avgFields: string[] = [],
+  lastFields: string[] = [],
 ): T[] {
   const groups = new Map<string, T[]>()
   for (const r of records) {
@@ -290,6 +353,9 @@ export function aggregateMonthly<T extends Record<string, unknown>>(
       const vals = items.map((i) => Number((i as Record<string, unknown>)[key]))
       if (vals.some(isNaN)) {
         merged[key] = (items[items.length - 1] as Record<string, unknown>)[key]
+      } else if (lastFields.includes(key)) {
+        // Snapshot/cumulative fields: use the last value in the period
+        merged[key] = vals[vals.length - 1]
       } else if (avgFields.includes(key)) {
         merged[key] = vals.reduce((a, b) => a + b, 0) / vals.length
       } else {

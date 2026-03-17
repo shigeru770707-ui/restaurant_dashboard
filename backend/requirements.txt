@@ -2,3 +2,9 @@ fastapi
 uvicorn[standard]
 pandas
 cryptography
+google-analytics-data
+google-auth
+google-auth-oauthlib
+google-api-python-client
+requests
+line-bot-sdk>=3.0

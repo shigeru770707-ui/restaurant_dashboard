@@ -8,6 +8,8 @@ Instagram Graph API v21.0 を使用。
 - 長期トークン自動更新（60日有効、50日で更新）
 """
 
+import hashlib
+import hmac
 import logging
 from datetime import datetime, timedelta
 
@@ -22,14 +24,23 @@ TOKEN_REFRESH_DAYS = 50  # 60日有効なので50日で更新
 
 
 class InstagramClient:
-    def __init__(self, user_id: str, access_token: str, store_id: int):
+    def __init__(self, user_id: str, access_token: str, store_id: int, app_secret: str = ""):
         self.user_id = user_id
         self.access_token = access_token
         self.store_id = store_id
+        self.app_secret = app_secret
         self._token_obtained_at: datetime | None = None
 
     def _params(self, **kwargs) -> dict:
-        return {"access_token": self.access_token, **kwargs}
+        params = {"access_token": self.access_token, **kwargs}
+        if self.app_secret:
+            proof = hmac.new(
+                self.app_secret.encode(),
+                self.access_token.encode(),
+                hashlib.sha256,
+            ).hexdigest()
+            params["appsecret_proof"] = proof
+        return params
 
     def _get(self, endpoint: str, params: dict | None = None) -> dict:
         url = f"{BASE_URL}/{endpoint}"

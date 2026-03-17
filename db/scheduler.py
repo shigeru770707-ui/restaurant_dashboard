@@ -43,11 +43,13 @@ def _build_clients(store: dict, store_key: str) -> dict:
     # Instagram — DB優先、secrets.tomlフォールバック
     ig_user_id = store.get("instagram_user_id") or store_secrets.get("instagram", {}).get("user_id")
     ig_token = store.get("instagram_access_token") or store_secrets.get("instagram", {}).get("access_token")
+    ig_app_secret = store.get("instagram_app_secret") or store_secrets.get("instagram", {}).get("app_secret", "")
     if ig_token and ig_user_id:
         clients["instagram"] = InstagramClient(
             user_id=ig_user_id,
             access_token=ig_token,
             store_id=store["id"],
+            app_secret=ig_app_secret,
         )
 
     # LINE — DB優先、secrets.tomlフォールバック

@@ -2,10 +2,14 @@ export interface InstagramStoreSettings {
   storeName: string
   accessToken: string
   userId: string
+  appSecret: string
 }
 
 export interface LineSettings {
   channelAccessToken: string
+  oaEmail: string
+  oaPassword: string
+  oaAccountId: string
 }
 
 export interface GA4Settings {
