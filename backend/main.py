@@ -78,15 +78,18 @@ def _df_to_records(df):
     """Convert DataFrame to list of dicts with JSON-safe types."""
     if df.empty:
         return []
+    import math
     df = df.copy()
     for col in df.columns:
         if hasattr(df[col], "dt"):
             df[col] = df[col].astype(str)
+    records = df.to_dict(orient="records")
     # Replace NaN/Inf with None for JSON compatibility
-    df = df.where(df.notna(), None)
-    import numpy as np
-    df = df.replace([np.inf, -np.inf], None)
-    return df.to_dict(orient="records")
+    for rec in records:
+        for k, v in rec.items():
+            if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                rec[k] = None
+    return records
 
 
 @app.get("/api/stores", dependencies=[Depends(verify_api_key)])
