@@ -97,7 +97,7 @@ export default function GA4() {
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           集客指標
         </h3>
-        <div className="grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-1.5 lg:gap-2 lg:grid-cols-5">
           <KpiCard title="セッション数" value={current.sessions} previousValue={previous.sessions} color={GA4_BLUE} />
           <KpiCard title="アクティブユーザー" value={current.active_users} previousValue={previous.active_users} color={GA4_BLUE} />
           <KpiCard title="新規ユーザー" value={current.new_users} previousValue={previous.new_users} color={GA4_BLUE} />
@@ -134,7 +134,7 @@ export default function GA4() {
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           流入チャネル
         </h3>
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <h3 className="mb-4 text-sm font-semibold text-muted-foreground">流入チャネル別割合</h3>
             <div className="h-[220px] md:h-[280px]">
@@ -197,7 +197,7 @@ export default function GA4() {
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           ユーザー属性分析
         </h3>
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-3">
           {/* Device */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <h3 className="mb-4 text-sm font-semibold text-muted-foreground">デバイス別</h3>

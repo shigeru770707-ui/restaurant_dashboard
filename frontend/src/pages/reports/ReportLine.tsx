@@ -46,6 +46,29 @@ export default function ReportLine({ selectedMonth, storeIndex, storeName, gener
     clickRate: m.unique_impressions > 0 ? (m.unique_clicks / m.unique_impressions) * 100 : 0,
   })).sort((a, b) => b.openRate - a.openRate).slice(0, isPdf ? 3 : 5)
 
+  // Weekly delivery frequency
+  const frequencyData = (() => {
+    const weekMap = new Map<string, number>()
+    for (const m of messages) {
+      const d = new Date(m.date)
+      const day = d.getDay()
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+      const monday = new Date(d)
+      monday.setDate(diff)
+      const weekKey = `${String(monday.getMonth() + 1).padStart(2, '0')}/${String(monday.getDate()).padStart(2, '0')}`
+      weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + 1)
+    }
+    return Array.from(weekMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([week, count]) => ({ week: `${week}~`, count }))
+  })()
+
+  // Click rate per message (for click rate trend chart)
+  const clickData = messages.map((m) => ({
+    label: m.date.slice(5, 10),
+    clickRate: m.delivered > 0 ? Math.round((m.unique_clicks / m.delivered) * 10000) / 100 : 0,
+  }))
+
   const diff = (curr: number, prev: number) => {
     if (!prev) return ''
     const pct = ((curr - prev) / prev) * 100
@@ -56,21 +79,21 @@ export default function ReportLine({ selectedMonth, storeIndex, storeName, gener
   return (
     <>
       {/* Header */}
-      <div className={`flex items-center justify-between ${isPdf ? "pb-2 mb-2" : "pb-3 mb-4"}`} style={{ borderBottom: `2px solid ${LINE_GREEN}` }}>
+      <div className={`flex items-center justify-between ${isPdf ? "pb-1.5 mb-1.5" : "pb-3 mb-4"}`} style={{ borderBottom: `2px solid ${LINE_GREEN}` }}>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">LINE公式アカウント 分析レポート</h1>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <h1 className={`font-bold text-gray-900 ${isPdf ? "text-sm" : "text-xl"}`}>LINE公式アカウント 分析レポート</h1>
+          <p className={`text-gray-500 ${isPdf ? "text-[9px] mt-0" : "text-xs mt-0.5"}`}>
             対象期間: {selectedMonth} | 店舗: {storeName} | 生成日: {generatedDate}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-sm font-bold" style={{ color: LINE_GREEN }}>SNS Analytics</p>
-          <p className="text-[9px] text-gray-400">&copy; 2026 GNS inc.</p>
+          <p className={`font-bold ${isPdf ? "text-[10px]" : "text-sm"}`} style={{ color: LINE_GREEN }}>SNS Analytics</p>
+          <p className="text-[8px] text-gray-400">&copy; 2026 GNS inc.</p>
         </div>
       </div>
 
       {/* KPI Scorecard */}
-      <div className={`grid grid-cols-6 gap-2 ${isPdf ? "mb-2" : "mb-4"}`}>
+      <div className={`grid grid-cols-6 ${isPdf ? "gap-1.5 mb-1.5" : "gap-2 mb-4"}`}>
         {[
           { label: '友だち数', value: formatNumber(current.followers), change: diff(current.followers, previous.followers), changeColor: diffColor(current.followers, previous.followers) },
           { label: '友だち増減', value: `${followerDiff >= 0 ? '+' : ''}${formatNumber(followerDiff)}`, change: '', changeColor: '#666' },
@@ -79,18 +102,18 @@ export default function ReportLine({ selectedMonth, storeIndex, storeName, gener
           { label: 'ブロック率', value: formatPercent(blockRate), change: blockRate > 20 ? '要注意' : '良好', changeColor: blockRate > 20 ? '#EA4335' : '#34A853' },
           { label: '配信回数', value: `${messages.length}回`, change: '', changeColor: '#666' },
         ].map((kpi, i) => (
-          <div key={i} className="rounded-lg border border-gray-200 p-2 text-center" style={{ borderTop: `3px solid ${LINE_GREEN}` }}>
-            <p className="text-[9px] text-gray-500 truncate">{kpi.label}</p>
-            <p className="text-sm font-bold text-gray-900 mt-0.5">{kpi.value}</p>
-            {kpi.change && <p className="text-[9px] font-medium mt-0.5" style={{ color: kpi.changeColor }}>{kpi.change}</p>}
+          <div key={i} className={`rounded-lg border border-gray-200 text-center ${isPdf ? "p-1.5" : "p-2"}`} style={{ borderTop: `3px solid ${LINE_GREEN}` }}>
+            <p className={`text-gray-500 truncate ${isPdf ? "text-[8px]" : "text-[9px]"}`}>{kpi.label}</p>
+            <p className={`font-bold text-gray-900 ${isPdf ? "text-[11px] mt-0" : "text-sm mt-0.5"}`}>{kpi.value}</p>
+            {kpi.change && <p className={`font-medium ${isPdf ? "text-[8px] mt-0" : "text-[9px] mt-0.5"}`} style={{ color: kpi.changeColor }}>{kpi.change}</p>}
           </div>
         ))}
       </div>
 
       {/* Main Grid */}
-      <div className={`grid grid-cols-2 ${isPdf ? "gap-3" : "gap-4"}`} style={{ fontSize: 11 }}>
+      <div className={`grid grid-cols-2 ${isPdf ? "gap-1.5 flex-1" : "gap-4"}`} style={{ fontSize: isPdf ? 10 : 11 }}>
         {/* Left: Messages + Demographics */}
-        <div className={isPdf ? "space-y-2" : "space-y-3"}>
+        <div className={isPdf ? "space-y-1.5" : "space-y-3"}>
           {/* Top Messages */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
             <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>配信パフォーマンス {isPdf ? "TOP3" : "TOP5"}（開封率順）</h3>
@@ -127,15 +150,15 @@ export default function ReportLine({ selectedMonth, storeIndex, storeName, gener
 
           {/* Demographics */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
-            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>友だち属性分析</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`}>友だち属性分析</h3>
+            <div className={`grid grid-cols-2 ${isPdf ? "gap-1.5" : "gap-3"}`}>
               {/* Gender Pie */}
               <div>
-                <p className="text-[9px] text-gray-500 mb-1">性別構成</p>
+                <p className={`text-gray-500 ${isPdf ? "text-[8px] mb-0.5" : "text-[9px] mb-1"}`}>性別構成</p>
                 <div style={{ height: isPdf ? 75 : 90 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={demographic.genders} dataKey="percentage" nameKey="label" cx="50%" cy="50%" outerRadius={35}
+                      <Pie data={demographic.genders} dataKey="percentage" nameKey="label" cx="50%" cy="50%" outerRadius={isPdf ? 25 : 35}
                         label={({ label, percentage }) => `${label} ${percentage}%`} labelLine={false}>
                         {demographic.genders.map((_, i) => (
                           <Cell key={i} fill={DEMO_COLORS[i % DEMO_COLORS.length]} />
@@ -147,28 +170,51 @@ export default function ReportLine({ selectedMonth, storeIndex, storeName, gener
               </div>
               {/* Age Bar */}
               <div>
-                <p className="text-[9px] text-gray-500 mb-1">年齢層</p>
+                <p className={`text-gray-500 ${isPdf ? "text-[8px] mb-0.5" : "text-[9px] mb-1"}`}>年齢層</p>
                 <div style={{ height: isPdf ? 75 : 90 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={demographic.ages.map(a => ({ name: a.label, value: a.percentage }))} layout="vertical" margin={{ left: 0, right: 5, top: 0, bottom: 0 }}>
                       <XAxis type="number" hide />
-                      <YAxis dataKey="name" type="category" tick={{ fontSize: 8, fill: '#666' }} axisLine={false} tickLine={false} width={30} />
-                      <Bar dataKey="value" fill={LINE_GREEN} radius={[0, 3, 3, 0]} barSize={10}
-                        label={{ position: 'right', fontSize: isPdf ? 8 : 7, fill: '#666', formatter: (v: number) => `${v}%` }} />
+                      <YAxis dataKey="name" type="category" tick={{ fontSize: isPdf ? 7 : 8, fill: '#666' }} axisLine={false} tickLine={false} width={25} />
+                      <Bar dataKey="value" fill={LINE_GREEN} radius={[0, 3, 3, 0]} barSize={isPdf ? 7 : 10}
+                        label={{ position: 'right', fontSize: isPdf ? 7 : 7, fill: '#666', formatter: (v: number) => `${v}%` }} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Delivery Frequency (PDF only) */}
+          {isPdf && (
+            <div className="rounded-lg border border-gray-200 p-2">
+              <h3 className="font-bold text-gray-700 text-[10px] mb-0.5">配信頻度（週別）</h3>
+              <div style={{ height: 80 }}>
+                {frequencyData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={frequencyData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                      <XAxis dataKey="week" tick={{ fontSize: 7, fill: '#666' }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 7, fill: '#666' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <ReferenceLine y={1} stroke={LINE_GREEN} strokeDasharray="6 3" strokeWidth={1.5}
+                        label={{ value: '推奨:週1', position: 'right', fill: LINE_GREEN, fontSize: 7 }} />
+                      <Bar dataKey="count" name="配信回数" fill={LINE_GREEN} radius={[2, 2, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-[8px] text-gray-400 text-center py-4">データなし</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right: Charts */}
-        <div className={isPdf ? "space-y-2" : "space-y-3"}>
+        <div className={isPdf ? "space-y-1.5" : "space-y-3"}>
           {/* Friends Trend */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
-            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>友だち数推移（過去6ヶ月）</h3>
-            <div style={{ height: isPdf ? 95 : 110 }}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`}>友だち数推移（過去6ヶ月）</h3>
+            <div style={{ height: isPdf ? 100 : 110 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
                   <defs>
@@ -189,8 +235,8 @@ export default function ReportLine({ selectedMonth, storeIndex, storeName, gener
 
           {/* Open Rate Trend */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
-            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>開封率トレンド（配信別）</h3>
-            <div style={{ height: isPdf ? 95 : 110 }}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`}>開封率トレンド（配信別）</h3>
+            <div style={{ height: isPdf ? 100 : 110 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={msgData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
@@ -205,20 +251,37 @@ export default function ReportLine({ selectedMonth, storeIndex, storeName, gener
           </div>
 
           {/* Action Items */}
-          <div className={`rounded-lg border-2 ${isPdf ? "p-2" : "p-3"}`} style={{ borderColor: '#BBF7D0', background: '#F0FDF4' }}>
-            <h3 className={`font-bold ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`} style={{ color: LINE_GREEN }}>インサイト & アクション</h3>
-            <ul className="space-y-1 text-[10px] text-gray-700 list-disc list-inside">
+          <div className={`rounded-lg border-2 ${isPdf ? "p-1.5" : "p-3"}`} style={{ borderColor: '#BBF7D0', background: '#F0FDF4' }}>
+            <h3 className={`font-bold ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`} style={{ color: LINE_GREEN }}>インサイト & アクション</h3>
+            <ul className={`text-gray-700 list-disc list-inside ${isPdf ? "space-y-0.5 text-[9px]" : "space-y-1 text-[10px]"}`}>
               <li>開封率 {openRate.toFixed(1)}% {openRate >= 60 ? '→ 業界平均60%を上回っています' : '→ 業界平均60%を下回り、改善余地あり'}</li>
               <li>ブロック率 {blockRate.toFixed(1)}% {blockRate > 20 ? '→ 配信頻度の見直しを推奨' : '→ 許容範囲内'}</li>
               <li>{topMessages[0] ? `最高開封率: ${topMessages[0].date.slice(5)} ${topMessages[0].hour}時配信 (${topMessages[0].openRate.toFixed(1)}%)` : '配信データなし'}</li>
               <li>月間配信回数: {messages.length}回 / 合計配信数: {formatNumber(totalDelivered)}</li>
             </ul>
           </div>
+
+          {/* Click Rate Trend (PDF only) */}
+          {isPdf && (
+            <div className="rounded-lg border border-gray-200 p-2">
+              <h3 className="font-bold text-gray-700 text-[10px] mb-0.5">クリック率トレンド（配信別）</h3>
+              <div style={{ height: 80 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={clickData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 7, fill: '#666' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 7, fill: '#666' }} unit="%" axisLine={false} tickLine={false} />
+                    <Bar dataKey="clickRate" name="クリック率" fill="#3B82F6" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Footer */}
-      <div className={`${isPdf ? "mt-auto" : "absolute bottom-0 left-0 right-0"} px-8 pb-4 pt-2 border-t border-gray-200 flex justify-between text-[8px] text-gray-400`}>
+      <div className={`${isPdf ? "mt-auto px-4 pb-2 pt-1" : "absolute bottom-0 left-0 right-0 px-8 pb-4 pt-2"} border-t border-gray-200 flex justify-between text-[8px] text-gray-400`}>
         <span>Data Source: LINE Official Account Manager API</span>
         <span>&copy; 2026 GNS inc. - SNS Analytics Dashboard</span>
       </div>

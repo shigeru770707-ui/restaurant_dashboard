@@ -75,7 +75,7 @@ function generatePostsForMonth(month: string): InstagramPost[] {
       saved: Math.floor(rand() * 200),
       shares: Math.floor(rand() * 120),
       permalink: '#',
-      thumbnail_url: `https://picsum.photos/seed/${tmpl.imgSeed}${i}/400/400`,
+      thumbnail_url: '',
     }
   }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 }
@@ -204,9 +204,9 @@ function generateGBPHourlyActions(month: string): GBPHourlyAction[] {
 
 /** Store-specific scale factors — each store has different traffic/engagement levels */
 const STORE_PROFILES = [
-  { scale: 1.0, label: '渋谷店' },     // flagship
-  { scale: 0.72, label: '表参道店' },   // medium
-  { scale: 0.55, label: '新宿店' },     // newer/smaller
+  { scale: 1.0, label: '海鮮居酒屋魚魯こ' },
+  { scale: 0.72, label: '練馬鳥長・新潟' },
+  { scale: 0.55, label: '魚とシャリUROKO' },
 ]
 
 function generateStoreInstagramInsights(storeIndex: number): InstagramInsight[] {

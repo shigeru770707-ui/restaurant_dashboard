@@ -21,6 +21,9 @@ import PageSizeSelector from '@/components/common/PageSizeSelector'
 import KpiCard from '@/components/common/KpiCard'
 import TrendBadge from '@/components/common/TrendBadge'
 import StoreSelector from '@/components/common/StoreSelector'
+import SectionHeader from '@/components/common/SectionHeader'
+import RankBadge from '@/components/common/RankBadge'
+import EmptyState from '@/components/common/EmptyState'
 import { useMonth } from '@/hooks/useMonth'
 import { usePeriod } from '@/hooks/usePeriod'
 import { useStore } from '@/hooks/useStore'
@@ -116,9 +119,15 @@ export default function Instagram() {
     impressions: item.impressions,
   }))
 
+  const isStoryFilter = postTypeFilter === 'STORY'
+
   const postsWithEng = filteredPosts
     .map((p) => {
-      const engTotal = p.like_count + p.comments_count + p.saved + p.shares
+      const isStory = p.media_product_type === 'STORY'
+      // ストーリー: (replies + taps_back) / reach、通常: (likes + comments + saved + shares) / reach
+      const engTotal = isStory
+        ? (p.replies ?? 0) + (p.taps_back ?? 0)
+        : p.like_count + p.comments_count + p.saved + p.shares
       const engRate = p.reach > 0 ? (engTotal / p.reach) * 100 : 0
       return { ...p, engTotal, engRate: Math.round(engRate * 100) / 100 }
     })
@@ -168,7 +177,10 @@ export default function Instagram() {
       if (hour >= 8 && hour <= 21) {
         const hourIdx = hour - 8
         grid[dayIdx][hourIdx]++
-        const eng = p.like_count + p.comments_count + p.saved + p.shares
+        const isStory = p.media_product_type === 'STORY'
+        const eng = isStory
+          ? (p.replies ?? 0) + (p.taps_back ?? 0)
+          : p.like_count + p.comments_count + p.saved + p.shares
         const rate = p.reach > 0 ? (eng / p.reach) * 100 : 0
         engGrid[dayIdx][hourIdx] = Math.max(engGrid[dayIdx][hourIdx], rate)
       }
@@ -221,10 +233,8 @@ export default function Instagram() {
 
       {/* Growth Section */}
       <section className="mb-6 md:mb-8">
-        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          成長指標
-        </h3>
-        <div className="grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">
+        <SectionHeader title="成長指標" icon="trending_up" color={IG_PRIMARY} withDivider />
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-1.5 lg:gap-2 lg:grid-cols-4">
           <KpiCard
             title="フォロワー数"
             value={current.followers_count}
@@ -262,18 +272,21 @@ export default function Instagram() {
               style={{ background: IG_SECONDARY }}
             />
             <p className="text-[11px] md:text-[13px] font-medium text-muted-foreground mb-1">
-              フォロワー増減（6ヶ月比）
+              フォロワー増減（{trend.length > 3 ? '6ヶ月' : `${trend.length}ヶ月`}比）
             </p>
             <p className="text-2xl md:text-[34px] font-bold text-foreground leading-tight">
               {yoyFollowers >= 0 ? '+' : ''}
               {formatNumber(yoyFollowers)}
             </p>
             {oldestTrend && (
-              <div className="mt-2">
+              <div className="mt-2 flex items-center gap-1.5">
                 <TrendBadge
                   currentValue={current.followers_count}
                   previousValue={oldestTrend.followers_count}
                 />
+                {trend.length <= 2 && (
+                  <span className="text-[10px] text-muted-foreground/60">※データ蓄積中</span>
+                )}
               </div>
             )}
           </div>
@@ -288,10 +301,8 @@ export default function Instagram() {
 
       {/* Post Count & Engagement Overview */}
       <section className="mb-6 md:mb-8">
-        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          投稿サマリー
-        </h3>
-        <div className="grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-5">
+        <SectionHeader title="投稿サマリー" icon="grid_view" color={IG_PRIMARY} withDivider />
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-1.5 lg:gap-2 lg:grid-cols-5">
           <div
             className="relative overflow-hidden rounded-xl border border-border bg-card p-3 sm:p-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
             style={{ boxShadow: CARD_SHADOW }}
@@ -366,9 +377,10 @@ export default function Instagram() {
       {/* Post Ranking with Thumbnails */}
       <section className="mb-6 md:mb-8">
         <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              投稿ランキング TOP5
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm" style={{ color: IG_PRIMARY }}>emoji_events</span>
+              投稿ランキング TOP{rankedPosts.length}
             </h3>
             <div className="flex gap-1">
               {([
@@ -379,12 +391,12 @@ export default function Instagram() {
                 <button
                   key={opt.key}
                   onClick={() => setRankingMetric(opt.key)}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all duration-200 ${
                     rankingMetric === opt.key
-                      ? 'text-white'
+                      ? 'text-white shadow-sm'
                       : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   }`}
-                  style={rankingMetric === opt.key ? { backgroundColor: IG_PRIMARY } : undefined}
+                  style={rankingMetric === opt.key ? { background: 'linear-gradient(135deg, #E1306C, #833AB4)' } : undefined}
                 >
                   {opt.label}
                 </button>
@@ -393,202 +405,147 @@ export default function Instagram() {
           </div>
 
           {rankedPosts.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">投稿データなし</p>
+            <EmptyState icon="photo_library" title="投稿データなし" description="接続テストでデータを取得してください" actionLabel="設定へ" actionHref="/settings" />
           ) : (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr]">
-              {/* 1位フィーチャー */}
-              {rankedPosts[0] && (() => {
-                const post = rankedPosts[0]
+            <div className="space-y-3">
+              {rankedPosts.map((post, i) => {
+                const rank = i + 1
                 const metricValue = rankingMetric === 'engRate' ? `${post.engRate.toFixed(1)}%`
                   : rankingMetric === 'like_count' ? formatNumber(post.like_count)
                   : formatNumber(post.reach)
-                const metricLabel = rankingMetric === 'engRate' ? 'ENG率'
-                  : rankingMetric === 'like_count' ? 'いいね'
-                  : 'リーチ'
+                const isFirst = rank === 1
+                const isTop3 = rank <= 3
+
                 return (
-                  <div className="group relative rounded-xl border border-border overflow-hidden">
-                    <div className="flex flex-row lg:flex-col">
+                  <div
+                    key={post.id}
+                    className={`group relative rounded-xl border overflow-hidden transition-all duration-200 hover:shadow-md ${
+                      isFirst ? 'border-pink-200 dark:border-pink-900/40 bg-gradient-to-r from-pink-50/50 to-transparent dark:from-pink-950/20' : 'border-border hover:bg-muted/30'
+                    }`}
+                  >
+                    <div className={`flex items-stretch gap-0 ${isFirst ? 'flex-col sm:flex-row' : 'flex-row'}`}>
                       {/* サムネイル */}
-                      <div className="relative w-24 h-24 sm:w-32 sm:h-32 lg:w-full lg:h-auto lg:aspect-[16/10] shrink-0 bg-muted overflow-hidden">
+                      <div className={`relative shrink-0 bg-muted overflow-hidden ${
+                        isFirst ? 'w-full h-48 sm:w-48 sm:h-auto' : 'w-16 h-16 sm:w-20 sm:h-20 m-2.5 rounded-lg'
+                      }`}>
                         {post.thumbnail_url ? (
-                          <img
-                            src={post.thumbnail_url}
-                            alt={post.caption}
-                            className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            loading="lazy"
-                          />
+                          <>
+                            <img
+                              src={post.thumbnail_url}
+                              alt=""
+                              className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              loading="lazy"
+                            />
+                            {isFirst && (
+                              <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent sm:bg-gradient-to-t sm:from-black/40 sm:via-transparent pointer-events-none" />
+                            )}
+                          </>
                         ) : (
-                          <div className="size-full flex items-center justify-center text-muted-foreground">
-                            <span className="material-symbols-outlined text-4xl">image</span>
+                          <div
+                            className="size-full flex items-center justify-center"
+                            style={{ background: 'linear-gradient(135deg, #E1306C, #833AB4, #F77737)' }}
+                          >
+                            <span className={`material-symbols-outlined text-white/70 ${isFirst ? 'text-5xl' : 'text-2xl'}`}>photo_camera</span>
                           </div>
                         )}
-                        {/* ランクバッジ */}
-                        <div
-                          className="absolute top-2 left-2 flex size-8 items-center justify-center rounded-full text-sm font-bold text-white shadow-md"
-                          style={{ background: 'linear-gradient(135deg, #E1306C 0%, #833AB4 100%)' }}
-                        >
-                          1
-                        </div>
-                        {/* 投稿タイプバッジ */}
-                        <div
-                          className="absolute top-2 right-2 rounded-full px-2 py-0.5 text-[10px] font-medium text-white shadow-sm"
-                          style={{ background: POST_TYPE_COLORS[post.media_product_type] || IG_PRIMARY }}
-                        >
-                          {postTypeLabel(post.media_product_type)}
-                        </div>
-                        {/* メトリクスオーバーレイ（デスクトップ） */}
-                        <div className="absolute inset-x-0 bottom-0 hidden lg:flex bg-gradient-to-t from-black/60 to-transparent p-3 pt-8">
-                          <div className="flex items-center gap-3 text-white text-xs">
-                            <span className="flex items-center gap-1">
-                              <span className="material-symbols-outlined text-sm">favorite</span>
+
+                        {/* ランクバッジ — 1位 */}
+                        {isFirst && (
+                          <div className="absolute top-3 left-3">
+                            <RankBadge rank={1} size="lg" accentColor={IG_PRIMARY} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* コンテンツ */}
+                      <div className={`flex-1 min-w-0 flex items-center ${isFirst ? 'p-4' : 'px-3 py-2.5'}`}>
+                        {/* ランクバッジ（2位以降） */}
+                        {!isFirst && (
+                          <div className="mr-3">
+                            <RankBadge rank={rank} size="md" accentColor={IG_PRIMARY} />
+                          </div>
+                        )}
+
+                        <div className="flex-1 min-w-0">
+                          {/* タイプ + キャプション */}
+                          <div className="flex items-center gap-2 mb-1">
+                            <span
+                              className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold text-white"
+                              style={{ background: POST_TYPE_COLORS[post.media_product_type] || IG_PRIMARY }}
+                            >
+                              {postTypeLabel(post.media_product_type)}
+                            </span>
+                            <p className={`text-foreground font-medium truncate ${isFirst ? 'text-sm' : 'text-xs'}`}>
+                              {post.caption || '(キャプションなし)'}
+                            </p>
+                          </div>
+
+                          {/* メトリクス行 */}
+                          <div className={`flex items-center flex-wrap gap-x-3 gap-y-1 ${isFirst ? 'text-xs' : 'text-[11px]'} text-muted-foreground`}>
+                            <span className="font-bold" style={{ color: IG_PRIMARY }}>
+                              {rankingMetric === 'engRate' ? 'ENG' : rankingMetric === 'like_count' ? '♥' : '👁'} {metricValue}
+                            </span>
+                            <span className="flex items-center gap-0.5">
+                              <span className="material-symbols-outlined text-xs">favorite</span>
                               {formatNumber(post.like_count)}
                             </span>
-                            <span className="flex items-center gap-1">
-                              <span className="material-symbols-outlined text-sm">chat_bubble</span>
-                              {formatNumber(post.comments_count)}
+                            <span className="flex items-center gap-0.5">
+                              <span className="material-symbols-outlined text-xs">visibility</span>
+                              {formatNumber(post.reach)}
                             </span>
-                            <span className="flex items-center gap-1">
-                              <span className="material-symbols-outlined text-sm">bookmark</span>
-                              {formatNumber(post.saved)}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <span className="material-symbols-outlined text-sm">share</span>
-                              {formatNumber(post.shares)}
-                            </span>
+                            {isFirst && (
+                              <>
+                                <span className="flex items-center gap-0.5">
+                                  <span className="material-symbols-outlined text-xs">bookmark</span>
+                                  {formatNumber(post.saved)}
+                                </span>
+                                <span className="flex items-center gap-0.5">
+                                  <span className="material-symbols-outlined text-xs">chat_bubble</span>
+                                  {formatNumber(post.comments_count)}
+                                </span>
+                              </>
+                            )}
+                            <span className="text-muted-foreground/50">{post.timestamp.slice(5, 10)}</span>
                           </div>
-                        </div>
-                      </div>
-                      {/* テキスト部分 */}
-                      <div className="flex-1 p-3 sm:p-4">
-                        <p className="text-sm font-medium text-foreground line-clamp-2 leading-snug mb-2">
-                          {post.caption}
-                        </p>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xl font-bold" style={{ color: IG_PRIMARY }}>
-                            {metricValue}
-                          </span>
-                          <span className="text-xs text-muted-foreground">{metricLabel}</span>
-                          {rankingMetric === 'engRate' && (
-                            <span className="text-[10px] text-muted-foreground">
-                              (業界平均 {BENCHMARK_ENG_RATE}% の {(post.engRate / BENCHMARK_ENG_RATE).toFixed(1)}倍)
-                            </span>
+
+                          {/* ENG率バー（1位のみ） */}
+                          {isFirst && rankingMetric === 'engRate' && (
+                            <div className="mt-2.5 max-w-xs">
+                              <div className="relative h-1.5 rounded-full bg-muted overflow-hidden">
+                                <div
+                                  className="absolute left-0 top-0 h-full rounded-full transition-all duration-700 ease-out"
+                                  style={{
+                                    width: `${Math.min(100, (post.engRate / 15) * 100)}%`,
+                                    background: 'linear-gradient(90deg, #F77737, #E1306C, #833AB4)',
+                                  }}
+                                />
+                                <div
+                                  className="absolute top-0 h-full w-px bg-foreground/30"
+                                  style={{ left: `${(BENCHMARK_ENG_RATE / 15) * 100}%` }}
+                                  title={`業界平均 ${BENCHMARK_ENG_RATE}%`}
+                                />
+                              </div>
+                            </div>
                           )}
                         </div>
-                        {/* ENG率バー */}
-                        {rankingMetric === 'engRate' && (
-                          <div className="relative h-1.5 rounded-full bg-muted overflow-hidden mb-2">
-                            <div
-                              className="absolute left-0 top-0 h-full rounded-full"
-                              style={{
-                                width: `${Math.min(100, (post.engRate / 20) * 100)}%`,
-                                background: 'linear-gradient(90deg, #E1306C, #833AB4)',
-                              }}
-                            />
-                            <div
-                              className="absolute top-0 h-full w-0.5 bg-amber-400"
-                              style={{ left: `${(BENCHMARK_ENG_RATE / 20) * 100}%` }}
-                            />
-                          </div>
+
+                        {/* 右端のリンク */}
+                        {post.permalink && post.permalink !== '#' && (
+                          <a
+                            href={post.permalink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 ml-2 text-muted-foreground/40 hover:text-foreground transition-colors"
+                            title="Instagramで開く"
+                          >
+                            <span className="material-symbols-outlined text-lg">open_in_new</span>
+                          </a>
                         )}
-                        {/* モバイル用メトリクス */}
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground lg:hidden">
-                          <span className="flex items-center gap-0.5">
-                            <span className="material-symbols-outlined text-sm">favorite</span>
-                            {formatNumber(post.like_count)}
-                          </span>
-                          <span className="flex items-center gap-0.5">
-                            <span className="material-symbols-outlined text-sm">chat_bubble</span>
-                            {formatNumber(post.comments_count)}
-                          </span>
-                          <span className="flex items-center gap-0.5">
-                            <span className="material-symbols-outlined text-sm">bookmark</span>
-                            {formatNumber(post.saved)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-[11px] text-muted-foreground">
-                            {post.timestamp.slice(0, 10)} {post.timestamp.slice(11, 16)}
-                          </span>
-                          <span className="text-[11px] text-muted-foreground">
-                            リーチ {formatNumber(post.reach)}
-                          </span>
-                        </div>
                       </div>
                     </div>
                   </div>
                 )
-              })()}
-
-              {/* 2〜5位リスト */}
-              <div className="flex flex-col gap-2">
-                {rankedPosts.slice(1).map((post, i) => {
-                  const rank = i + 2
-                  const metricValue = rankingMetric === 'engRate' ? `${post.engRate.toFixed(1)}%`
-                    : rankingMetric === 'like_count' ? formatNumber(post.like_count)
-                    : formatNumber(post.reach)
-                  return (
-                    <div
-                      key={post.id}
-                      className="flex items-center gap-3 rounded-lg border border-border p-2 transition-colors hover:bg-muted/50"
-                    >
-                      {/* ランクバッジ */}
-                      <div
-                        className="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                        style={{
-                          background: `rgba(225,48,108,0.12)`,
-                          color: IG_PRIMARY,
-                          border: `1px solid rgba(225,48,108,0.3)`,
-                        }}
-                      >
-                        {rank}
-                      </div>
-                      {/* サムネイル */}
-                      <div className="size-[72px] shrink-0 rounded-lg bg-muted overflow-hidden">
-                        {post.thumbnail_url ? (
-                          <img
-                            src={post.thumbnail_url}
-                            alt={post.caption}
-                            className="size-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="size-full flex items-center justify-center text-muted-foreground">
-                            <span className="material-symbols-outlined text-2xl">image</span>
-                          </div>
-                        )}
-                      </div>
-                      {/* テキスト */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span
-                            className="rounded-full px-1.5 py-0.5 text-[9px] font-medium text-white"
-                            style={{ background: POST_TYPE_COLORS[post.media_product_type] || IG_PRIMARY }}
-                          >
-                            {postTypeLabel(post.media_product_type)}
-                          </span>
-                          <p className="text-[12px] text-foreground truncate font-medium">
-                            {post.caption}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                          <span className="font-bold" style={{ color: IG_PRIMARY }}>
-                            {rankingMetric === 'engRate' ? 'ENG' : rankingMetric === 'like_count' ? '❤' : 'リーチ'} {metricValue}
-                          </span>
-                          <span className="flex items-center gap-0.5">
-                            <span className="material-symbols-outlined text-xs">favorite</span>
-                            {formatNumber(post.like_count)}
-                          </span>
-                          <span className="hidden sm:inline-flex items-center gap-0.5">
-                            <span className="material-symbols-outlined text-xs">visibility</span>
-                            {formatNumber(post.reach)}
-                          </span>
-                          <span className="text-muted-foreground/60">{post.timestamp.slice(5, 10)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+              })}
             </div>
           )}
         </div>
@@ -596,10 +553,12 @@ export default function Instagram() {
 
       {/* Visibility Section */}
       <section className="mb-6 md:mb-8">
-        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+          <span className="material-symbols-outlined text-sm" style={{ color: IG_SECONDARY }}>visibility</span>
           露出指標
+          <span className="flex-1 h-px bg-border ml-2" />
         </h3>
-        <div className="grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-1.5 lg:gap-2 lg:grid-cols-4">
           <KpiCard
             title="インプレッション"
             value={current.impressions}
@@ -640,10 +599,12 @@ export default function Instagram() {
 
       {/* Engagement Section */}
       <section className="mb-6 md:mb-8">
-        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+          <span className="material-symbols-outlined text-sm" style={{ color: IG_PRIMARY }}>favorite</span>
           エンゲージメント指標
+          <span className="flex-1 h-px bg-border ml-2" />
         </h3>
-        <div className="grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-1.5 lg:gap-2 lg:grid-cols-4">
           {(() => {
             const totalLikes = posts.reduce((s, p) => s + p.like_count, 0)
             const totalComments = posts.reduce((s, p) => s + p.comments_count, 0)
@@ -663,9 +624,10 @@ export default function Instagram() {
 
       {/* Charts Row */}
       <section className="mb-6 md:mb-8">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm" style={{ color: IG_PRIMARY }}>show_chart</span>
               フォロワー数推移（過去6ヶ月）
             </h3>
             <div className="h-[220px] md:h-[280px]">
@@ -688,7 +650,8 @@ export default function Instagram() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm" style={{ color: IG_SECONDARY }}>analytics</span>
               リーチ・インプレッション推移（過去6ヶ月）
             </h3>
             <div className="h-[220px] md:h-[280px]">
@@ -710,10 +673,11 @@ export default function Instagram() {
 
       {/* Post Frequency & Heatmap Row */}
       <section className="mb-6 md:mb-8">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {/* Post Frequency Chart */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm" style={{ color: IG_TERTIARY }}>bar_chart</span>
               投稿頻度（週別・タイプ別）
             </h3>
             <div className="h-[220px] md:h-[280px]">
@@ -721,7 +685,7 @@ export default function Instagram() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={frequencyData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical={false} />
-                    <XAxis dataKey="week" tick={{ fill: TICK_COLOR, fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="week" tick={{ fill: TICK_COLOR, fontSize: 10 }} axisLine={false} tickLine={false} angle={-30} textAnchor="end" height={50} />
                     <YAxis tick={{ fill: TICK_COLOR, fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
                     <Tooltip contentStyle={TOOLTIP_STYLE} />
                     <Legend />
@@ -738,7 +702,8 @@ export default function Instagram() {
 
           {/* Posting Time Heatmap */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm" style={{ color: IG_SECONDARY }}>schedule</span>
               投稿時間帯ヒートマップ
             </h3>
             <div className="overflow-x-auto">
@@ -806,7 +771,8 @@ export default function Instagram() {
         <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm" style={{ color: IG_PRIMARY }}>table_chart</span>
                 投稿別パフォーマンス
               </h3>
               <span className="text-xs text-muted-foreground">
@@ -851,14 +817,25 @@ export default function Instagram() {
                 <thead>
                   <tr>
                     <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium">投稿日時</th>
-                    <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium hidden md:table-cell">投稿タイプ</th>
-                    <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium hidden lg:table-cell">メディア</th>
+                    <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium w-10">画像</th>
+                    <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium hidden md:table-cell">タイプ</th>
                     <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium">キャプション</th>
                     <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium">リーチ</th>
-                    <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium">いいね</th>
-                    <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium hidden sm:table-cell">コメント</th>
-                    <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium hidden sm:table-cell">保存</th>
-                    <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium hidden md:table-cell">シェア</th>
+                    {isStoryFilter ? (
+                      <>
+                        <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium">返信</th>
+                        <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium hidden sm:table-cell">離脱</th>
+                        <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium hidden sm:table-cell">スキップ</th>
+                        <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium hidden md:table-cell">戻り</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium">いいね</th>
+                        <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium hidden sm:table-cell">コメント</th>
+                        <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium hidden sm:table-cell">保存</th>
+                        <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium hidden md:table-cell">シェア</th>
+                      </>
+                    )}
                     <th className="text-left p-2 md:p-3 text-xs uppercase tracking-wider text-muted-foreground border-b border-border font-medium">ENG率</th>
                   </tr>
                 </thead>
@@ -875,17 +852,23 @@ export default function Instagram() {
                         <td className="p-2 md:p-3 border-b border-border text-muted-foreground whitespace-nowrap">
                           {post.timestamp.slice(5, 10)} {post.timestamp.slice(11, 16)}
                         </td>
+                        <td className="p-2 md:p-3 border-b border-border">
+                          <div className="size-10 rounded-lg overflow-hidden bg-muted shrink-0">
+                            {post.thumbnail_url ? (
+                              <img src={post.thumbnail_url} alt="" className="size-full object-cover" loading="lazy" />
+                            ) : (
+                              <div className="size-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #E1306C, #833AB4)' }}>
+                                <span className="material-symbols-outlined text-sm text-white/70">photo_camera</span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
                         <td className="p-2 md:p-3 border-b border-border hidden md:table-cell">
                           <span
-                            className="inline-block rounded-full px-2 py-0.5 text-xs text-white font-medium"
+                            className="inline-block rounded-full px-2 py-0.5 text-[10px] text-white font-medium"
                             style={{ backgroundColor: POST_TYPE_COLORS[post.media_product_type] || IG_PRIMARY }}
                           >
                             {postTypeLabel(post.media_product_type)}
-                          </span>
-                        </td>
-                        <td className="p-2 md:p-3 border-b border-border hidden lg:table-cell">
-                          <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                            {mediaTypeLabel(post.media_type)}
                           </span>
                         </td>
                         <td className="p-2 md:p-3 border-b border-border text-foreground max-w-[120px] md:max-w-[200px] truncate">
@@ -902,18 +885,37 @@ export default function Instagram() {
                         <td className="p-2 md:p-3 border-b border-border text-foreground">
                           {formatNumber(post.reach)}
                         </td>
-                        <td className="p-2 md:p-3 border-b border-border text-foreground">
-                          {formatNumber(post.like_count)}
-                        </td>
-                        <td className="p-2 md:p-3 border-b border-border text-foreground hidden sm:table-cell">
-                          {formatNumber(post.comments_count)}
-                        </td>
-                        <td className="p-2 md:p-3 border-b border-border text-foreground hidden sm:table-cell">
-                          {formatNumber(post.saved)}
-                        </td>
-                        <td className="p-2 md:p-3 border-b border-border text-foreground hidden md:table-cell">
-                          {formatNumber(post.shares)}
-                        </td>
+                        {isStoryFilter ? (
+                          <>
+                            <td className="p-2 md:p-3 border-b border-border text-foreground">
+                              {formatNumber(post.replies ?? 0)}
+                            </td>
+                            <td className="p-2 md:p-3 border-b border-border text-foreground hidden sm:table-cell">
+                              {formatNumber(post.exits ?? 0)}
+                            </td>
+                            <td className="p-2 md:p-3 border-b border-border text-foreground hidden sm:table-cell">
+                              {formatNumber(post.taps_forward ?? 0)}
+                            </td>
+                            <td className="p-2 md:p-3 border-b border-border text-foreground hidden md:table-cell">
+                              {formatNumber(post.taps_back ?? 0)}
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="p-2 md:p-3 border-b border-border text-foreground">
+                              {formatNumber(post.like_count)}
+                            </td>
+                            <td className="p-2 md:p-3 border-b border-border text-foreground hidden sm:table-cell">
+                              {formatNumber(post.comments_count)}
+                            </td>
+                            <td className="p-2 md:p-3 border-b border-border text-foreground hidden sm:table-cell">
+                              {formatNumber(post.saved)}
+                            </td>
+                            <td className="p-2 md:p-3 border-b border-border text-foreground hidden md:table-cell">
+                              {formatNumber(post.shares)}
+                            </td>
+                          </>
+                        )}
                         <td className="p-2 md:p-3 border-b border-border">
                           <span
                             className={`font-semibold ${
@@ -953,7 +955,8 @@ export default function Instagram() {
       <section>
         <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm" style={{ color: IG_PRIMARY }}>insights</span>
               エンゲージメント率トレンド（投稿別）
             </h3>
             <span className="text-[10px] text-muted-foreground flex items-center gap-1">

@@ -55,6 +55,56 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
     return { name: type === 'FEED' ? 'フィード' : type === 'STORY' ? 'ストーリー' : 'リール', avg: Math.round(avg * 10) / 10, type }
   })
 
+  // Post frequency data (weekly) — for PDF only
+  const frequencyData = (() => {
+    const weekMap = new Map<string, { feed: number; story: number; reels: number }>()
+    for (const p of data.posts) {
+      const d = new Date(p.timestamp)
+      const day = d.getDay()
+      const dateDiff = d.getDate() - day + (day === 0 ? -6 : 1)
+      const monday = new Date(d)
+      monday.setDate(dateDiff)
+      const weekKey = `${String(monday.getMonth() + 1).padStart(2, '0')}/${String(monday.getDate()).padStart(2, '0')}`
+      if (!weekMap.has(weekKey)) weekMap.set(weekKey, { feed: 0, story: 0, reels: 0 })
+      const entry = weekMap.get(weekKey)!
+      if (p.media_product_type === 'FEED') entry.feed++
+      else if (p.media_product_type === 'STORY') entry.story++
+      else if (p.media_product_type === 'REELS') entry.reels++
+    }
+    return Array.from(weekMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([week, counts]) => ({ week: `${week}~`, ...counts, total: counts.feed + counts.story + counts.reels }))
+  })()
+
+  // Heatmap data (day x hour) — for PDF only
+  const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
+  const HOUR_LABELS = ['8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21']
+  const heatmapGrid: number[][] = Array.from({ length: 7 }, () => Array(14).fill(0))
+  const heatmapEngGrid: number[][] = Array.from({ length: 7 }, () => Array(14).fill(0))
+  for (const p of data.posts) {
+    const d = new Date(p.timestamp)
+    const dayIdx = (d.getDay() + 6) % 7
+    const hour = d.getHours()
+    if (hour >= 8 && hour <= 21) {
+      const hourIdx = hour - 8
+      heatmapGrid[dayIdx][hourIdx]++
+      const isStory = p.media_product_type === 'STORY'
+      const eng = isStory
+        ? ((p as any).replies ?? 0) + ((p as any).taps_back ?? 0)
+        : p.like_count + p.comments_count + (p.saved ?? 0) + (p.shares ?? 0)
+      const rate = p.reach > 0 ? (eng / p.reach) * 100 : 0
+      heatmapEngGrid[dayIdx][hourIdx] = Math.max(heatmapEngGrid[dayIdx][hourIdx], rate)
+    }
+  }
+  // Find best time slot
+  let bestDay = 0, bestHour = 0, bestEng = 0
+  for (let d = 0; d < 7; d++) {
+    for (let h = 0; h < 14; h++) {
+      if (heatmapEngGrid[d][h] > bestEng) { bestEng = heatmapEngGrid[d][h]; bestDay = d; bestHour = h }
+    }
+  }
+  const maxHeatCount = Math.max(1, ...heatmapGrid.flat())
+
   const diff = (curr: number, prev: number) => {
     if (!prev) return ''
     const pct = ((curr - prev) / prev) * 100
@@ -65,9 +115,9 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
   return (
     <>
       {/* Header */}
-      <div className={`flex items-center justify-between ${isPdf ? "pb-2 mb-2" : "pb-3 mb-4"}`} style={{ borderBottom: `2px solid ${IG_PRIMARY}` }}>
+      <div className={`flex items-center justify-between ${isPdf ? "pb-1.5 mb-1.5" : "pb-3 mb-4"}`} style={{ borderBottom: `2px solid ${IG_PRIMARY}` }}>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Instagram 分析レポート</h1>
+          <h1 className={`${isPdf ? "text-base" : "text-xl"} font-bold text-gray-900`}>Instagram 分析レポート</h1>
           <p className="text-xs text-gray-500 mt-0.5">
             対象期間: {selectedMonth} | 店舗: {storeName} | 生成日: {generatedDate}
           </p>
@@ -79,7 +129,7 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
       </div>
 
       {/* KPI Scorecard */}
-      <div className={`grid ${isPdf ? "grid-cols-5" : "grid-cols-6"} gap-2 ${isPdf ? "mb-2" : "mb-4"}`}>
+      <div className={`grid ${isPdf ? "grid-cols-5 gap-1.5 mb-1.5" : "grid-cols-6 gap-2 mb-4"}`}>
         {[
           { label: 'フォロワー数', value: formatNumber(current.followers_count), change: diff(current.followers_count, previous.followers_count), changeColor: diffColor(current.followers_count, previous.followers_count) },
           { label: 'フォロワー増減', value: `${followerDiff >= 0 ? '+' : ''}${formatNumber(followerDiff)}`, change: '', changeColor: '#666' },
@@ -88,26 +138,27 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
           ...(!isPdf ? [{ label: 'インプレッション', value: formatNumber(current.impressions), change: diff(current.impressions, previous.impressions), changeColor: diffColor(current.impressions, previous.impressions) }] : []),
           { label: 'プロフィール表示', value: formatNumber(current.profile_views), change: diff(current.profile_views, previous.profile_views), changeColor: diffColor(current.profile_views, previous.profile_views) },
         ].map((kpi, i) => (
-          <div key={i} className="rounded-lg border border-gray-200 p-2 text-center" style={{ borderTop: `3px solid ${IG_PRIMARY}` }}>
-            <p className="text-[9px] text-gray-500 truncate">{kpi.label}</p>
-            <p className="text-sm font-bold text-gray-900 mt-0.5">{kpi.value}</p>
-            {kpi.change && <p className="text-[9px] font-medium mt-0.5" style={{ color: kpi.changeColor }}>{kpi.change}</p>}
+          <div key={i} className={`rounded-lg border border-gray-200 text-center ${isPdf ? "p-1.5" : "p-2"}`} style={{ borderTop: `3px solid ${IG_PRIMARY}` }}>
+            <p className={`${isPdf ? "text-[8px]" : "text-[9px]"} text-gray-500 truncate`}>{kpi.label}</p>
+            <p className={`${isPdf ? "text-[13px]" : "text-sm"} font-bold text-gray-900 mt-0.5`}>{kpi.value}</p>
+            {kpi.change && <p className={`${isPdf ? "text-[8px]" : "text-[9px]"} font-medium mt-0.5`} style={{ color: kpi.changeColor }}>{kpi.change}</p>}
           </div>
         ))}
       </div>
 
       {/* Main Grid: 2 columns */}
-      <div className={`grid grid-cols-2 ${isPdf ? "gap-2" : "gap-4"}`} style={{ fontSize: 11 }}>
+      <div className={`grid grid-cols-2 ${isPdf ? "gap-1.5 flex-1" : "gap-4"}`} style={{ fontSize: isPdf ? 10 : 11 }}>
         {/* Left: Top Posts */}
-        <div className={isPdf ? "space-y-2" : "space-y-3"}>
+        <div className={isPdf ? "space-y-1.5" : "space-y-3"}>
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
             <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1.5" : "text-xs mb-2"}`}>人気投稿 {isPdf ? "TOP3" : "TOP5"}（ENG率順）</h3>
-            <div className="space-y-2">
+            <div className={isPdf ? "space-y-1.5" : "space-y-2"}>
               {posts.map((p, i) => {
                 const maxEng = posts[0]?.engRate ?? 1
                 const barWidth = Math.round((p.engRate / maxEng) * 100)
+                const thumbSize = isPdf ? 40 : 48
                 return (
-                  <div key={p.id} className="flex items-start gap-2 pb-2 border-b border-gray-100 last:border-0">
+                  <div key={p.id} className={`flex items-start gap-2 ${isPdf ? "pb-1.5" : "pb-2"} border-b border-gray-100 last:border-0`}>
                     <span
                       className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white mt-0.5"
                       style={{ background: i === 0 ? '#F9AB00' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#999' }}
@@ -120,12 +171,12 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
                         alt=""
                         crossOrigin="anonymous"
                         className="flex-shrink-0 rounded object-cover"
-                        style={{ width: 48, height: 48 }}
+                        style={{ width: thumbSize, height: thumbSize }}
                       />
                     ) : (
                       <div
                         className="flex-shrink-0 rounded bg-gray-100 flex items-center justify-center"
-                        style={{ width: 48, height: 48, fontSize: 18 }}
+                        style={{ width: thumbSize, height: thumbSize, fontSize: isPdf ? 14 : 18 }}
                       >
                         {p.media_product_type === 'REELS' ? '🎬' : p.media_product_type === 'STORY' ? '📱' : '🖼'}
                       </div>
@@ -184,7 +235,7 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
                 </ResponsiveContainer>
               </div>
               )}
-              <div style={{ height: isPdf ? 80 : 100 }}>
+              <div style={{ height: isPdf ? 85 : 100 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={engByType} margin={{ left: 0, right: 5, top: 0, bottom: 0 }}>
                     <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} />
@@ -200,14 +251,39 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
               </div>
             </div>
           </div>
+
+          {/* Post Frequency (PDF only) */}
+          {isPdf && (
+            <div className="rounded-lg border border-gray-200 p-2">
+              <h3 className="font-bold text-gray-700 text-[10px] mb-1">投稿頻度（週別）</h3>
+              <div style={{ height: 80 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={frequencyData} margin={{ left: 0, right: 5, top: 0, bottom: 0 }}>
+                    <XAxis dataKey="week" tick={{ fontSize: 7, fill: '#666' }} axisLine={false} tickLine={false} />
+                    <YAxis hide allowDecimals={false} />
+                    <Bar dataKey="feed" name="フィード" stackId="a" fill={POST_TYPE_COLORS.FEED} radius={0} />
+                    <Bar dataKey="story" name="ストーリー" stackId="a" fill={POST_TYPE_COLORS.STORY} radius={0} />
+                    <Bar dataKey="reels" name="リール" stackId="a" fill={POST_TYPE_COLORS.REELS} radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex gap-3 mt-0.5 justify-center">
+                {[{ label: 'フィード', color: POST_TYPE_COLORS.FEED }, { label: 'ストーリー', color: POST_TYPE_COLORS.STORY }, { label: 'リール', color: POST_TYPE_COLORS.REELS }].map(l => (
+                  <span key={l.label} className="flex items-center gap-0.5 text-[7px] text-gray-500">
+                    <span className="inline-block w-2 h-2 rounded-sm" style={{ background: l.color }} />{l.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right: Charts */}
-        <div className={isPdf ? "space-y-2" : "space-y-3"}>
+        <div className={isPdf ? "space-y-1.5" : "space-y-3"}>
           {/* Follower Trend */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
             <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1.5" : "text-xs mb-2"}`}>フォロワー推移（過去6ヶ月）</h3>
-            <div style={{ height: isPdf ? 110 : 130 }}>
+            <div style={{ height: isPdf ? 100 : 130 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
                   <defs>
@@ -229,7 +305,7 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
           {/* Reach Trend */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
             <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1.5" : "text-xs mb-2"}`}>リーチ数推移（過去6ヶ月）</h3>
-            <div style={{ height: isPdf ? 110 : 130 }}>
+            <div style={{ height: isPdf ? 100 : 130 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
                   <defs>
@@ -249,8 +325,8 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
           </div>
 
           {/* Action Items */}
-          <div className={`rounded-lg border-2 ${isPdf ? "p-2" : "p-3"}`} style={{ borderColor: '#FCE7EF', background: '#FFF5F8' }}>
-            <h3 className={`font-bold ${isPdf ? "text-[10px] mb-1.5" : "text-xs mb-2"}`} style={{ color: IG_PRIMARY }}>インサイト & アクション</h3>
+          <div className={`rounded-lg border-2 ${isPdf ? "p-1.5" : "p-3"}`} style={{ borderColor: '#FCE7EF', background: '#FFF5F8' }}>
+            <h3 className={`font-bold ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`} style={{ color: IG_PRIMARY }}>インサイト & アクション</h3>
             <ul className="space-y-1 text-[10px] text-gray-700 list-disc list-inside">
               <li>最もENG率の高い投稿タイプ: <strong>{engByType.sort((a, b) => b.avg - a.avg)[0]?.name}</strong></li>
               <li>{posts[0] ? `「${posts[0].caption.slice(0, 20)}...」が最高ENG率 → 類似コンテンツ強化` : 'ENG率の改善を検討'}</li>
@@ -258,11 +334,53 @@ export default function ReportInstagram({ selectedMonth, storeIndex, storeName, 
               <li>{engRate >= 2.2 ? '業界平均ENG率(2.2%)を上回っています' : '業界平均ENG率(2.2%)以下 → コンテンツ改善を検討'}</li>
             </ul>
           </div>
+
+          {/* Posting Heatmap (PDF only) */}
+          {isPdf && (
+            <div className="rounded-lg border border-gray-200 p-2">
+              <h3 className="font-bold text-gray-700 text-[10px] mb-1">投稿時間帯</h3>
+              <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 16 }} />
+                    {HOUR_LABELS.map(h => (
+                      <th key={h} style={{ fontSize: 6, color: '#999', textAlign: 'center', padding: 0, fontWeight: 400 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {DAY_LABELS.map((day, dayIdx) => (
+                    <tr key={day}>
+                      <td style={{ fontSize: 7, color: '#666', textAlign: 'right', paddingRight: 2, fontWeight: 500 }}>{day}</td>
+                      {HOUR_LABELS.map((_, hourIdx) => {
+                        const count = heatmapGrid[dayIdx][hourIdx]
+                        const intensity = count / maxHeatCount
+                        return (
+                          <td key={hourIdx} style={{ padding: 0.5 }}>
+                            <div style={{
+                              width: 12, height: 12,
+                              borderRadius: 1,
+                              background: count > 0 ? `rgba(225,48,108,${0.15 + intensity * 0.85})` : '#f3f4f6',
+                            }} />
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {bestEng > 0 && (
+                <p className="text-[8px] text-gray-600 mt-1">
+                  最高ENG率の時間帯: <strong style={{ color: IG_PRIMARY }}>{DAY_LABELS[bestDay]}曜 {bestHour + 8}時台</strong>（{bestEng.toFixed(1)}%）
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Footer */}
-      <div className={`${isPdf ? "mt-auto" : "absolute bottom-0 left-0 right-0"} px-8 pb-4 pt-2 border-t border-gray-200 flex justify-between text-[8px] text-gray-400`}>
+      <div className={`${isPdf ? "mt-auto pt-1.5" : "absolute bottom-0 left-0 right-0 pt-2"} px-8 pb-4 border-t border-gray-200 flex justify-between text-[8px] text-gray-400`}>
         <span>Data Source: Instagram Graph API / Instagram Insights</span>
         <span>&copy; 2026 GNS inc. - SNS Analytics Dashboard</span>
       </div>

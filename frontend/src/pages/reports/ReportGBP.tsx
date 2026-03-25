@@ -74,21 +74,21 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
   return (
     <>
       {/* Header */}
-      <div className={`flex items-center justify-between ${isPdf ? "pb-2 mb-2" : "pb-3 mb-4"}`} style={{ borderBottom: `2px solid ${GBP_RED}` }}>
+      <div className={`flex items-center justify-between ${isPdf ? "pb-1.5 mb-1.5" : "pb-3 mb-4"}`} style={{ borderBottom: `2px solid ${GBP_RED}` }}>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Googleビジネスプロフィール 分析レポート</h1>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <h1 className={`font-bold text-gray-900 ${isPdf ? "text-sm" : "text-xl"}`}>Googleビジネスプロフィール 分析レポート</h1>
+          <p className={`text-gray-500 ${isPdf ? "text-[9px] mt-0" : "text-xs mt-0.5"}`}>
             対象期間: {selectedMonth} | 店舗: {storeName} | 生成日: {generatedDate}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-sm font-bold" style={{ color: GBP_RED }}>SNS Analytics</p>
-          <p className="text-[9px] text-gray-400">&copy; 2026 GNS inc.</p>
+          <p className={`font-bold ${isPdf ? "text-[10px]" : "text-sm"}`} style={{ color: GBP_RED }}>SNS Analytics</p>
+          <p className="text-[8px] text-gray-400">&copy; 2026 GNS inc.</p>
         </div>
       </div>
 
       {/* KPI Scorecard */}
-      <div className={`grid grid-cols-6 gap-2 ${isPdf ? "mb-2" : "mb-4"}`}>
+      <div className={`grid grid-cols-6 ${isPdf ? "gap-1.5 mb-1.5" : "gap-2 mb-4"}`}>
         {[
           { label: '表示回数', value: formatNumber(totalViews), change: diff(totalViews, prevTotalViews), changeColor: diffColor(totalViews, prevTotalViews) },
           { label: 'アクション合計', value: formatNumber(totalActions), change: diff(totalActions, prevTotalActions), changeColor: diffColor(totalActions, prevTotalActions) },
@@ -97,31 +97,31 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
           { label: '口コミ返信率', value: `${replyRate}%`, change: replyRate >= 73 ? '良好' : `目標73%`, changeColor: replyRate >= 73 ? '#34A853' : '#F9AB00' },
           { label: '口コミ件数', value: `${totalRatings}件`, change: '', changeColor: '#666' },
         ].map((kpi, i) => (
-          <div key={i} className="rounded-lg border border-gray-200 p-2 text-center" style={{ borderTop: `3px solid ${GBP_RED}` }}>
-            <p className="text-[9px] text-gray-500 truncate">{kpi.label}</p>
-            <p className="text-sm font-bold text-gray-900 mt-0.5">{kpi.value}</p>
-            {kpi.change && <p className="text-[9px] font-medium mt-0.5" style={{ color: kpi.changeColor }}>{kpi.change}</p>}
+          <div key={i} className={`rounded-lg border border-gray-200 text-center ${isPdf ? "p-1.5" : "p-2"}`} style={{ borderTop: `3px solid ${GBP_RED}` }}>
+            <p className={`text-gray-500 truncate ${isPdf ? "text-[8px]" : "text-[9px]"}`}>{kpi.label}</p>
+            <p className={`font-bold text-gray-900 ${isPdf ? "text-[11px] mt-0" : "text-sm mt-0.5"}`}>{kpi.value}</p>
+            {kpi.change && <p className={`font-medium ${isPdf ? "text-[8px] mt-0" : "text-[9px] mt-0.5"}`} style={{ color: kpi.changeColor }}>{kpi.change}</p>}
           </div>
         ))}
       </div>
 
       {/* Main Grid */}
-      <div className={`grid grid-cols-2 ${isPdf ? "gap-3" : "gap-4"}`} style={{ fontSize: 11 }}>
+      <div className={`grid grid-cols-2 ${isPdf ? "gap-1.5 flex-1" : "gap-4"}`} style={{ fontSize: isPdf ? 10 : 11 }}>
         {/* Left: Actions + Rating */}
-        <div className={isPdf ? "space-y-2" : "space-y-3"}>
+        <div className={isPdf ? "space-y-1.5" : "space-y-3"}>
           {/* Action Breakdown */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
             <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>アクション内訳</h3>
-            <div className="grid grid-cols-3 gap-2 text-center">
+            <div className={`grid grid-cols-3 ${isPdf ? "gap-1.5" : "gap-2"} text-center`}>
               {[
                 { label: 'ウェブサイト', value: current.actions_website, color: '#4285F4', pct: totalActions > 0 ? ((current.actions_website / totalActions) * 100).toFixed(1) : '0' },
                 { label: '電話発信', value: current.actions_phone, color: '#34A853', pct: totalActions > 0 ? ((current.actions_phone / totalActions) * 100).toFixed(1) : '0' },
                 { label: '経路検索', value: current.actions_directions, color: '#F9AB00', pct: totalActions > 0 ? ((current.actions_directions / totalActions) * 100).toFixed(1) : '0' },
               ].map((a, i) => (
-                <div key={i} className="rounded-lg border border-gray-100 p-2">
-                  <p className="text-lg font-bold text-gray-900">{formatNumber(a.value)}</p>
-                  <p className="text-[9px] text-gray-500">{a.label}</p>
-                  <p className="text-[9px] font-medium" style={{ color: a.color }}>{a.pct}%</p>
+                <div key={i} className={`rounded-lg border border-gray-100 ${isPdf ? "p-1.5" : "p-2"}`}>
+                  <p className={`font-bold text-gray-900 ${isPdf ? "text-sm" : "text-lg"}`}>{formatNumber(a.value)}</p>
+                  <p className={`text-gray-500 ${isPdf ? "text-[8px]" : "text-[9px]"}`}>{a.label}</p>
+                  <p className={`font-medium ${isPdf ? "text-[8px]" : "text-[9px]"}`} style={{ color: a.color }}>{a.pct}%</p>
                 </div>
               ))}
             </div>
@@ -130,11 +130,11 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
           {/* Impression Breakdown */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
             <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>表示内訳</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <div style={{ height: 80 }}>
+            <div className={`grid grid-cols-2 ${isPdf ? "gap-1.5" : "gap-2"}`}>
+              <div style={{ height: isPdf ? 85 : 80 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={impressionData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={20} outerRadius={35}
+                    <Pie data={impressionData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={isPdf ? 15 : 20} outerRadius={isPdf ? 28 : 35}
                       label={({ name }) => name} labelLine={false}>
                       {impressionData.map((d, i) => (
                         <Cell key={i} fill={d.color} />
@@ -158,14 +158,14 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
 
           {/* Rating Distribution */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
-            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>評価分布</h3>
-            <div className="flex gap-3">
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`}>評価分布</h3>
+            <div className={`flex ${isPdf ? "gap-2" : "gap-3"}`}>
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{avgRating.toFixed(1)}</p>
-                <p className="text-[9px]"><StarText rating={avgRating} /></p>
-                <p className="text-[8px] text-gray-400">{totalRatings}件</p>
+                <p className={`font-bold text-gray-900 ${isPdf ? "text-lg" : "text-2xl"}`}>{avgRating.toFixed(1)}</p>
+                <p className={isPdf ? "text-[8px]" : "text-[9px]"}><StarText rating={avgRating} /></p>
+                <p className={`text-gray-400 ${isPdf ? "text-[7px]" : "text-[8px]"}`}>{totalRatings}件</p>
               </div>
-              <div className="flex-1" style={{ height: isPdf ? 60 : 70 }}>
+              <div className="flex-1" style={{ height: isPdf ? 70 : 70 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={ratingChartData} layout="vertical" margin={{ left: 0, right: 5, top: 0, bottom: 0 }}>
                     <XAxis type="number" hide />
@@ -180,14 +180,34 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
               </div>
             </div>
           </div>
+
+          {/* Actions Trend (PDF only) */}
+          {isPdf && (
+          <div className="rounded-lg border border-gray-200 p-2">
+            <h3 className="text-[10px] font-bold text-gray-700 mb-0.5">アクション数推移</h3>
+            <div style={{ height: 80 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fontSize: 8, fill: '#666' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 8, fill: '#666' }} axisLine={false} tickLine={false} />
+                  <Legend wrapperStyle={{ fontSize: 7 }} />
+                  <Line type="monotone" dataKey="website" name="Web" stroke="#4285F4" strokeWidth={1.5} dot={false} />
+                  <Line type="monotone" dataKey="phone" name="電話" stroke="#EA4335" strokeWidth={1.5} dot={false} />
+                  <Line type="monotone" dataKey="directions" name="経路" stroke="#34A853" strokeWidth={1.5} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          )}
         </div>
 
         {/* Right: Trends + Reviews */}
-        <div className={isPdf ? "space-y-2" : "space-y-3"}>
+        <div className={isPdf ? "space-y-1.5" : "space-y-3"}>
           {/* Search Trend */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
-            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>表示回数推移（Maps vs 検索）</h3>
-            <div style={{ height: 100 }}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`}>表示回数推移（Maps vs 検索）</h3>
+            <div style={{ height: isPdf ? 100 : 100 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
@@ -204,10 +224,10 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
 
           {/* Recent Reviews */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
-            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>最近の口コミ</h3>
-            <div className="space-y-1.5">
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`}>最近の口コミ</h3>
+            <div className={isPdf ? "space-y-1" : "space-y-1.5"}>
               {topReviews.map((r, i) => (
-                <div key={i} className="rounded border border-gray-100 p-2" style={{ borderLeftWidth: 3, borderLeftColor: RATING_COLORS[r.rating] || '#999' }}>
+                <div key={i} className={`rounded border border-gray-100 ${isPdf ? "p-1.5" : "p-2"}`} style={{ borderLeftWidth: 3, borderLeftColor: RATING_COLORS[r.rating] || '#999' }}>
                   <div className="flex items-center justify-between mb-0.5">
                     <span className="text-[9px]"><StarText rating={r.rating} /> <span className="text-gray-500">{r.author}</span></span>
                     <span className="text-[8px] text-gray-400">{r.date}</span>
@@ -220,23 +240,23 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
 
           {/* Store Comparison */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
-            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>店舗間比較</h3>
-            <table className="w-full text-[9px]">
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`}>店舗間比較</h3>
+            <table className={`w-full ${isPdf ? "text-[8px]" : "text-[9px]"}`}>
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-1 font-medium text-gray-500">店舗</th>
-                  <th className="text-right py-1 font-medium text-gray-500">表示</th>
-                  <th className="text-right py-1 font-medium text-gray-500">アクション</th>
-                  <th className="text-right py-1 font-medium text-gray-500">評価</th>
+                  <th className={`text-left font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>店舗</th>
+                  <th className={`text-right font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>表示</th>
+                  <th className={`text-right font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>アクション</th>
+                  <th className={`text-right font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>評価</th>
                 </tr>
               </thead>
               <tbody>
                 {storeComparison.map((s, i) => (
                   <tr key={i} className="border-b border-gray-100" style={{ background: i === storeIndex ? '#FEF2F2' : undefined }}>
-                    <td className="py-1 font-medium text-gray-800">{s.name}</td>
-                    <td className="py-1 text-right text-gray-600">{formatNumber(s.views)}</td>
-                    <td className="py-1 text-right text-gray-600">{formatNumber(s.actions)}</td>
-                    <td className="py-1 text-right text-gray-600">{s.rating.toFixed(1)}★</td>
+                    <td className={`font-medium text-gray-800 ${isPdf ? "py-0.5" : "py-1"}`}>{s.name}</td>
+                    <td className={`text-right text-gray-600 ${isPdf ? "py-0.5" : "py-1"}`}>{formatNumber(s.views)}</td>
+                    <td className={`text-right text-gray-600 ${isPdf ? "py-0.5" : "py-1"}`}>{formatNumber(s.actions)}</td>
+                    <td className={`text-right text-gray-600 ${isPdf ? "py-0.5" : "py-1"}`}>{s.rating.toFixed(1)}★</td>
                   </tr>
                 ))}
               </tbody>
@@ -244,19 +264,59 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
           </div>
 
           {/* Action Items */}
-          <div className={`rounded-lg border-2 ${isPdf ? "p-2" : "p-3"}`} style={{ borderColor: '#FECACA', background: '#FEF2F2' }}>
-            <h3 className={`font-bold ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`} style={{ color: GBP_RED }}>インサイト & アクション</h3>
-            <ul className="space-y-1 text-[10px] text-gray-700 list-disc list-inside">
+          <div className={`rounded-lg border-2 ${isPdf ? "p-1.5" : "p-3"}`} style={{ borderColor: '#FECACA', background: '#FEF2F2' }}>
+            <h3 className={`font-bold ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`} style={{ color: GBP_RED }}>インサイト & アクション</h3>
+            <ul className={`text-gray-700 list-disc list-inside ${isPdf ? "space-y-0.5 text-[9px]" : "space-y-1 text-[10px]"}`}>
               <li>平均評価 {avgRating.toFixed(1)} {avgRating >= 4.6 ? '→ 業界平均4.6以上' : '→ 口コミ返信強化で改善を目指す'}</li>
               <li>返信率 {replyRate}% {replyRate >= 73 ? '→ 良好' : '→ 目標73%まで返信率を向上'}</li>
               <li>主要アクション: {current.actions_website >= current.actions_phone && current.actions_website >= current.actions_directions ? 'ウェブサイト閲覧' : current.actions_phone >= current.actions_directions ? '電話発信' : '経路検索'}</li>
             </ul>
           </div>
+
+          {/* Review Response Status (PDF only) */}
+          {isPdf && (
+          <div className="rounded-lg border border-gray-200 p-2">
+            <h3 className="text-[10px] font-bold text-gray-700 mb-1">口コミ対応状況</h3>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[9px] text-gray-500">返信率</span>
+              <span className="text-[11px] font-bold" style={{ color: replyRate >= 73 ? '#34A853' : '#F9AB00' }}>{replyRate}%</span>
+              <span className="text-[7px] px-1 py-0.5 rounded-full font-medium" style={{
+                background: replyRate >= 73 ? 'rgba(52,168,83,0.1)' : 'rgba(249,171,0,0.1)',
+                color: replyRate >= 73 ? '#34A853' : '#F9AB00',
+              }}>
+                {replyRate >= 73 ? '良好' : '目標73%'}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-0.5 relative">
+              <div className="h-2 rounded-full" style={{ width: `${Math.min(replyRate, 100)}%`, background: replyRate >= 73 ? '#34A853' : '#F9AB00' }} />
+              <div className="absolute top-0 h-2 w-px bg-red-500" style={{ left: '73%' }} />
+            </div>
+            <div className="flex justify-between text-[7px] text-gray-400 mb-1.5">
+              <span>0%</span>
+              <span style={{ color: '#EA4335' }}>目標73%</span>
+              <span>100%</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1 text-center border-t border-gray-100 pt-1">
+              <div>
+                <p className="text-[10px] font-bold text-gray-900">{totalRatings}</p>
+                <p className="text-[7px] text-gray-500">総口コミ数</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-900">{avgRating.toFixed(1)}</p>
+                <p className="text-[7px] text-gray-500">平均評価</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-900">{ratingDistribution.find((r) => r.rating === 5)?.count ?? 0}</p>
+                <p className="text-[7px] text-gray-500">5★件数</p>
+              </div>
+            </div>
+          </div>
+          )}
         </div>
       </div>
 
       {/* Footer */}
-      <div className={`${isPdf ? "mt-auto" : "absolute bottom-0 left-0 right-0"} px-8 pb-4 pt-2 border-t border-gray-200 flex justify-between text-[8px] text-gray-400`}>
+      <div className={`${isPdf ? "mt-auto px-4 pb-2 pt-1" : "absolute bottom-0 left-0 right-0 px-8 pb-4 pt-2"} border-t border-gray-200 flex justify-between text-[8px] text-gray-400`}>
         <span>Data Source: Google Business Profile API / Google My Business</span>
         <span>&copy; 2026 GNS inc. - SNS Analytics Dashboard</span>
       </div>

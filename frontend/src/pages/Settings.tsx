@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { useApiSettings } from '@/hooks/useApiSettings'
+import type { InstagramStoreSettings } from '@/types/settings'
 import { testInstagram, testLine, testGA4, testGBP } from '@/utils/apiTest'
 import { saveCredentials, postJson, fetchCredentialsSummary } from '@/utils/api'
 import type { ConnectionStatus, ConnectionTestResult } from '@/types/settings'
@@ -130,6 +131,25 @@ export default function Settings() {
       }
       if (summary.line_oa_account_id && !settings.line.oaAccountId) {
         updateLine({ oaAccountId: summary.line_oa_account_id })
+      }
+      // Instagram: DB保存済みの認証情報を復元
+      if (summary.instagram_access_token_raw || summary.instagram_app_secret_raw || summary.instagram_user_id) {
+        const igStore = settings.instagram[0]
+        if (igStore) {
+          const updates: Partial<InstagramStoreSettings> = {}
+          if (summary.instagram_access_token_raw && !igStore.accessToken) {
+            updates.accessToken = summary.instagram_access_token_raw
+          }
+          if (summary.instagram_app_secret_raw && !igStore.appSecret) {
+            updates.appSecret = summary.instagram_app_secret_raw
+          }
+          if (summary.instagram_user_id && !igStore.userId) {
+            updates.userId = summary.instagram_user_id
+          }
+          if (Object.keys(updates).length > 0) {
+            updateInstagramStore(0, updates)
+          }
+        }
       }
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps

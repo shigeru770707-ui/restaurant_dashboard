@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useMonth } from '@/hooks/useMonth'
 import type { ReportType } from '@/components/common/ExportDropdown'
 import ReportSummary from './reports/ReportSummary'
@@ -8,7 +8,7 @@ import ReportLine from './reports/ReportLine'
 import ReportGA4 from './reports/ReportGA4'
 import ReportGBP from './reports/ReportGBP'
 
-const STORE_NAMES = ['渋谷店', '表参道店', '新宿店']
+const STORE_NAMES = ['海鮮居酒屋魚魯こ', '練馬鳥長・新潟', '魚とシャリUROKO']
 
 const REPORT_TYPE_LABELS: Record<ReportType, string> = {
   summary: '全体サマリー',
@@ -20,6 +20,7 @@ const REPORT_TYPE_LABELS: Record<ReportType, string> = {
 
 export default function Report() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const { selectedMonth } = useMonth()
   const reportRef = useRef<HTMLDivElement>(null)
   const [isPdf, setIsPdf] = useState(false)
@@ -31,7 +32,7 @@ export default function Report() {
   )
 
   const updateParams = (type: ReportType, store: number) => {
-    setSearchParams({ type, store: String(store) })
+    setSearchParams({ type, store: String(store) }, { replace: true })
   }
 
   const handleExport = () => {
@@ -45,9 +46,9 @@ export default function Report() {
         // isPdf再レンダリング後のコンテンツ高さを計測
         const contentHeight = el.scrollHeight
         const a4Height = 793 // 210mm @96dpi
-        // コンテンツがA4に収まらない場合、zoomで微調整
-        if (contentHeight > a4Height) {
-          el.style.zoom = String(a4Height / contentHeight)
+        // 常にzoomで1ページに収める（フッター溢れ防止）
+        if (contentHeight > a4Height * 0.95) {
+          el.style.zoom = String((a4Height * 0.95) / contentHeight)
         }
 
         const originalTitle = document.title
@@ -81,7 +82,7 @@ export default function Report() {
       <div className="mx-auto max-w-[1200px] mb-4 flex items-center justify-between no-print">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => window.history.back()}
+            onClick={() => navigate('/')}
             className="flex items-center gap-1 rounded-lg bg-white px-3 py-2 text-sm text-gray-600 shadow-sm hover:bg-gray-50"
           >
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>

@@ -49,21 +49,21 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
   return (
     <>
       {/* Header */}
-      <div className={`flex items-center justify-between ${isPdf ? "pb-2 mb-2" : "pb-3 mb-4"}`} style={{ borderBottom: `2px solid ${GA4_BLUE}` }}>
+      <div className={`flex items-center justify-between ${isPdf ? "pb-1.5 mb-1.5" : "pb-3 mb-4"}`} style={{ borderBottom: `2px solid ${GA4_BLUE}` }}>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Google Analytics 4 分析レポート</h1>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <h1 className={`font-bold text-gray-900 ${isPdf ? "text-sm" : "text-xl"}`}>Google Analytics 4 分析レポート</h1>
+          <p className={`text-gray-500 ${isPdf ? "text-[9px] mt-0" : "text-xs mt-0.5"}`}>
             対象期間: {selectedMonth} | 店舗: {storeName} | 生成日: {generatedDate}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-sm font-bold" style={{ color: GA4_BLUE }}>SNS Analytics</p>
-          <p className="text-[9px] text-gray-400">&copy; 2026 GNS inc.</p>
+          <p className={`font-bold ${isPdf ? "text-[10px]" : "text-sm"}`} style={{ color: GA4_BLUE }}>SNS Analytics</p>
+          <p className="text-[8px] text-gray-400">&copy; 2026 GNS inc.</p>
         </div>
       </div>
 
       {/* KPI Scorecard */}
-      <div className={`grid grid-cols-6 gap-2 ${isPdf ? "mb-2" : "mb-4"}`}>
+      <div className={`grid grid-cols-6 ${isPdf ? "gap-1.5 mb-1.5" : "gap-2 mb-4"}`}>
         {[
           { label: 'セッション数', value: formatNumber(current.sessions), change: diff(current.sessions, previous.sessions), changeColor: diffColor(current.sessions, previous.sessions) },
           { label: 'アクティブユーザー', value: formatNumber(current.active_users), change: diff(current.active_users, previous.active_users), changeColor: diffColor(current.active_users, previous.active_users) },
@@ -72,27 +72,27 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
           { label: 'CVR', value: formatPercent(cvr), change: diff(cvr, prevCvr), changeColor: diffColor(cvr, prevCvr) },
           { label: '直帰率', value: formatPercent(current.bounce_rate), change: diff(current.bounce_rate, previous.bounce_rate), changeColor: current.bounce_rate <= previous.bounce_rate ? '#34A853' : '#EA4335' },
         ].map((kpi, i) => (
-          <div key={i} className="rounded-lg border border-gray-200 p-2 text-center" style={{ borderTop: `3px solid ${GA4_BLUE}` }}>
-            <p className="text-[9px] text-gray-500 truncate">{kpi.label}</p>
-            <p className="text-sm font-bold text-gray-900 mt-0.5">{kpi.value}</p>
-            {kpi.change && <p className="text-[9px] font-medium mt-0.5" style={{ color: kpi.changeColor }}>{kpi.change}</p>}
+          <div key={i} className={`rounded-lg border border-gray-200 text-center ${isPdf ? "p-1.5" : "p-2"}`} style={{ borderTop: `3px solid ${GA4_BLUE}` }}>
+            <p className={`text-gray-500 truncate ${isPdf ? "text-[8px]" : "text-[9px]"}`}>{kpi.label}</p>
+            <p className={`font-bold text-gray-900 ${isPdf ? "text-[11px] mt-0" : "text-sm mt-0.5"}`}>{kpi.value}</p>
+            {kpi.change && <p className={`font-medium ${isPdf ? "text-[8px] mt-0" : "text-[9px] mt-0.5"}`} style={{ color: kpi.changeColor }}>{kpi.change}</p>}
           </div>
         ))}
       </div>
 
       {/* Main Grid */}
-      <div className={`grid grid-cols-2 ${isPdf ? "gap-3" : "gap-4"}`} style={{ fontSize: 11 }}>
+      <div className={`grid grid-cols-2 ${isPdf ? "gap-1.5 flex-1" : "gap-4"}`} style={{ fontSize: isPdf ? 10 : 11 }}>
         {/* Left: Traffic + Pages */}
-        <div className={isPdf ? "space-y-2" : "space-y-3"}>
+        <div className={isPdf ? "space-y-1.5" : "space-y-3"}>
           {/* Traffic Sources */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
             <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>流入チャネル</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <div style={{ height: 100 }}>
+            <div className={`grid grid-cols-2 ${isPdf ? "gap-1.5" : "gap-2"}`}>
+              <div style={{ height: isPdf ? 90 : 100 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={40}
-                      label={({ name }) => name} labelLine={false}>
+                    <Pie data={pieData.slice(0, isPdf ? 8 : 15)} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={isPdf ? 30 : 40}
+                      label={isPdf ? false : ({ name }: { name: string }) => name} labelLine={false}>
                       {pieData.map((_, i) => (
                         <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
@@ -103,13 +103,13 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
               <div>
                 <table className="w-full text-[9px]">
                   <tbody>
-                    {trafficSources.map((s, i) => (
+                    {trafficSources.slice(0, isPdf ? 8 : 15).map((s, i) => (
                       <tr key={i} className="border-b border-gray-100">
                         <td className="py-0.5 flex items-center gap-1">
                           <span className="w-2 h-2 rounded-full inline-block" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
-                          {s.channel}
+                          <span className="truncate max-w-[80px] inline-block">{s.channel}</span>
                         </td>
-                        <td className="py-0.5 text-right text-gray-600">{formatNumber(s.sessions)}</td>
+                        <td className="py-0.5 text-right text-gray-600 whitespace-nowrap">{formatNumber(s.sessions)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -120,14 +120,14 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
 
           {/* Page Ranking */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
-            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>人気ページ {isPdf ? "TOP3" : "TOP5"}</h3>
-            <table className="w-full text-[9px]">
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`}>人気ページ {isPdf ? "TOP3" : "TOP5"}</h3>
+            <table className={`w-full ${isPdf ? "text-[8px]" : "text-[9px]"}`}>
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-1 font-medium text-gray-500 w-5">#</th>
-                  <th className="text-left py-1 font-medium text-gray-500">ページ</th>
-                  <th className="text-right py-1 font-medium text-gray-500">PV</th>
-                  <th className="text-right py-1 font-medium text-gray-500">滞在(秒)</th>
+                  <th className={`text-left font-medium text-gray-500 w-5 ${isPdf ? "py-0.5" : "py-1"}`}>#</th>
+                  <th className={`text-left font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>ページ</th>
+                  <th className={`text-right font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>PV</th>
+                  <th className={`text-right font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>滞在(秒)</th>
                 </tr>
               </thead>
               <tbody>
@@ -147,6 +147,23 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
               </tbody>
             </table>
           </div>
+
+          {/* Conversion Trend (PDF only) */}
+          {isPdf && (
+          <div className="rounded-lg border border-gray-200 p-2">
+            <h3 className="text-[10px] font-bold text-gray-700 mb-0.5">コンバージョン数推移</h3>
+            <div style={{ height: 80 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={trendData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fontSize: 8, fill: '#666' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 8, fill: '#666' }} axisLine={false} tickLine={false} />
+                  <Bar dataKey="conversions" name="CV" fill={GA4_BLUE} radius={[2, 2, 0, 0]} barSize={12} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          )}
 
           {/* Demographics */}
           {!isPdf && (
@@ -186,11 +203,11 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
         </div>
 
         {/* Right: Trends + Heatmap */}
-        <div className={isPdf ? "space-y-2" : "space-y-3"}>
+        <div className={isPdf ? "space-y-1.5" : "space-y-3"}>
           {/* Session Trend */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
-            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>セッション数推移（過去6ヶ月）</h3>
-            <div style={{ height: 100 }}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`}>セッション数推移（過去6ヶ月）</h3>
+            <div style={{ height: isPdf ? 100 : 100 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
                   <defs>
@@ -211,8 +228,8 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
 
           {/* Bounce Rate Trend */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
-            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>直帰率トレンド（過去6ヶ月）</h3>
-            <div style={{ height: 100 }}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`}>直帰率トレンド（過去6ヶ月）</h3>
+            <div style={{ height: isPdf ? 100 : 100 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
@@ -228,8 +245,8 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
 
           {/* Session Heatmap */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
-            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`}>セッション時間帯ヒートマップ</h3>
-            <table className={`w-full border-separate ${isPdf ? "text-[8px]" : "text-[7px]"}`} style={{ borderSpacing: 1 }}>
+            <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`}>セッション時間帯ヒートマップ</h3>
+            <table className={`w-full border-separate ${isPdf ? "text-[7px]" : "text-[7px]"}`} style={{ borderSpacing: isPdf ? 0.5 : 1 }}>
               <thead>
                 <tr>
                   <th className="w-5" />
@@ -249,7 +266,7 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
                       const opacity = maxSessions > 0 ? Math.max(0.05, val / maxSessions) : 0
                       return (
                         <td key={h} className="text-center rounded-sm"
-                          style={{ background: `rgba(66, 133, 244, ${opacity})`, padding: '2px 0', minWidth: 16 }} />
+                          style={{ background: `rgba(66, 133, 244, ${opacity})`, padding: isPdf ? '1.5px 0' : '2px 0', minWidth: isPdf ? 14 : 16 }} />
                       )
                     })}
                   </tr>
@@ -259,20 +276,50 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
           </div>
 
           {/* Action Items */}
-          <div className={`rounded-lg border-2 ${isPdf ? "p-2" : "p-3"}`} style={{ borderColor: '#BFDBFE', background: '#EFF6FF' }}>
-            <h3 className={`font-bold ${isPdf ? "text-[10px] mb-1" : "text-xs mb-2"}`} style={{ color: GA4_BLUE }}>インサイト & アクション</h3>
-            <ul className="space-y-1 text-[10px] text-gray-700 list-disc list-inside">
+          <div className={`rounded-lg border-2 ${isPdf ? "p-1.5" : "p-3"}`} style={{ borderColor: '#BFDBFE', background: '#EFF6FF' }}>
+            <h3 className={`font-bold ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`} style={{ color: GA4_BLUE }}>インサイト & アクション</h3>
+            <ul className={`text-gray-700 list-disc list-inside ${isPdf ? "space-y-0.5 text-[9px]" : "space-y-1 text-[10px]"}`}>
               <li>CVR {cvr.toFixed(2)}% {cvr >= 2 ? '→ 良好な水準' : '→ LP改善でCV数向上を目指す'}</li>
               <li>直帰率 {current.bounce_rate.toFixed(1)}% {current.bounce_rate <= 56 ? '→ 業界平均56%以下' : '→ 業界平均56%超、UI改善推奨'}</li>
               <li>上位流入元: {trafficSources[0]?.channel} ({formatNumber(trafficSources[0]?.sessions ?? 0)}セッション)</li>
               <li>人気ページ1位: {topPages[0]?.page_title} ({formatNumber(topPages[0]?.page_views ?? 0)} PV)</li>
             </ul>
           </div>
+
+          {/* Region TOP3 (PDF only) */}
+          {isPdf && (
+          <div className="rounded-lg border border-gray-200 p-2">
+            <h3 className="text-[10px] font-bold text-gray-700 mb-0.5">地域別アクセス TOP3</h3>
+            <table className="w-full text-[8px]">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left font-medium text-gray-500 py-0.5">#</th>
+                  <th className="text-left font-medium text-gray-500 py-0.5">地域</th>
+                  <th className="text-right font-medium text-gray-500 py-0.5">割合</th>
+                </tr>
+              </thead>
+              <tbody>
+                {demographic.regions.slice(0, 3).map((r, i) => (
+                  <tr key={i} className="border-b border-gray-100">
+                    <td className="py-0.5">
+                      <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[7px] font-bold text-white inline-flex"
+                        style={{ background: i === 0 ? '#EA4335' : i === 1 ? '#4285F4' : '#34A853' }}>
+                        {i + 1}
+                      </span>
+                    </td>
+                    <td className="py-0.5 text-gray-800">{r.label}</td>
+                    <td className="py-0.5 text-right text-gray-600">{r.percentage}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          )}
         </div>
       </div>
 
       {/* Footer */}
-      <div className={`${isPdf ? "mt-auto" : "absolute bottom-0 left-0 right-0"} px-8 pb-4 pt-2 border-t border-gray-200 flex justify-between text-[8px] text-gray-400`}>
+      <div className={`${isPdf ? "mt-auto px-4 pb-2 pt-1" : "absolute bottom-0 left-0 right-0 px-8 pb-4 pt-2"} border-t border-gray-200 flex justify-between text-[8px] text-gray-400`}>
         <span>Data Source: Google Analytics 4 Data API</span>
         <span>&copy; 2026 GNS inc. - SNS Analytics Dashboard</span>
       </div>

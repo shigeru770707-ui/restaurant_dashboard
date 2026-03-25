@@ -32,7 +32,7 @@ export default function KpiCard({
 
   if (isLoading) {
     return (
-      <div className="relative overflow-hidden rounded-xl border border-border bg-card p-3 sm:p-4 md:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
+      <div className="relative overflow-hidden rounded-xl border border-border bg-card p-2 sm:p-2.5 md:p-3 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
         <div className="h-3.5 w-20 animate-pulse rounded bg-muted mb-3" />
         <div className="h-9 w-28 animate-pulse rounded bg-muted" />
       </div>
@@ -41,7 +41,7 @@ export default function KpiCard({
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-xl border bg-card p-3 sm:p-4 md:p-6 transition-transform transition-shadow duration-200 active:scale-[0.98] md:hover:-translate-y-0.5 md:hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] ${
+      className={`group relative overflow-hidden rounded-xl border bg-card p-2 sm:p-2.5 md:p-3 transition-transform transition-shadow duration-200 active:scale-[0.98] md:hover:-translate-y-0.5 md:hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] ${
         showAlert
           ? 'ring-2 ring-amber-400/50 border-amber-300 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_0_0_1px_rgba(251,191,36,0.1)]'
           : 'border-border shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]'
@@ -67,7 +67,7 @@ export default function KpiCard({
       </p>
 
       {/* Main value */}
-      <p className="text-2xl md:text-[34px] font-extrabold text-foreground leading-tight tracking-tight">
+      <p className="text-xl sm:text-2xl md:text-[28px] font-extrabold text-foreground leading-tight tracking-tight">
         {formattedValue}
         {unit && unit !== '%' && (
           <span className="ml-1.5 text-base font-medium text-muted-foreground">{unit}</span>

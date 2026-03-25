@@ -101,9 +101,9 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
   return (
     <>
       {/* Header */}
-      <div className={`flex items-center justify-between border-b-2 border-indigo-600 ${isPdf ? "pb-2 mb-2" : "pb-3 mb-4"}`}>
+      <div className={`flex items-center justify-between border-b-2 border-indigo-600 ${isPdf ? "pb-1.5 mb-1.5" : "pb-3 mb-4"}`}>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">マーケティングレポート</h1>
+          <h1 className={`${isPdf ? "text-base" : "text-xl"} font-bold text-gray-900`}>マーケティングレポート</h1>
           <p className="text-xs text-gray-500 mt-0.5">
             対象期間: {selectedMonth} | 店舗: {storeName} | 生成日: {generatedDate}
           </p>
@@ -115,7 +115,7 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
       </div>
 
       {/* Scorecard */}
-      <div className={`grid grid-cols-8 ${isPdf ? "gap-1.5" : "gap-2"} ${isPdf ? "mb-2" : "mb-4"}`}>
+      <div className={`grid grid-cols-8 ${isPdf ? "gap-1" : "gap-2"} ${isPdf ? "mb-1.5" : "mb-4"}`}>
         {[
           { label: 'IGフォロワー', value: formatNumber(ig.current.followers_count), change: diff(ig.current.followers_count, ig.previous.followers_count), changeColor: diffColor(ig.current.followers_count, ig.previous.followers_count), accent: '#E1306C' },
           { label: 'IG ENG率', value: formatPercent(igEngRate), change: diff(igEngRate, prevIgEngRate), changeColor: diffColor(igEngRate, prevIgEngRate), accent: '#E1306C' },
@@ -126,25 +126,25 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
           { label: 'GBP評価', value: `${gbpAvgRating.toFixed(1)}★`, change: '', accent: '#EA4335' },
           { label: 'GBPアクション', value: formatNumber(gbpTotalActions), change: '', accent: '#EA4335' },
         ].map((kpi, i) => (
-          <div key={i} className="rounded-lg border border-gray-200 p-2 text-center" style={{ borderTop: `3px solid ${kpi.accent}` }}>
-            <p className="text-[9px] text-gray-500 truncate">{kpi.label}</p>
-            <p className="text-sm font-bold text-gray-900 mt-0.5">{kpi.value}</p>
-            {kpi.change && <p className="text-[9px] font-medium mt-0.5" style={{ color: kpi.changeColor }}>{kpi.change}</p>}
+          <div key={i} className={`rounded-lg border border-gray-200 text-center ${isPdf ? "p-1.5" : "p-2"}`} style={{ borderTop: `3px solid ${kpi.accent}` }}>
+            <p className={`${isPdf ? "text-[8px]" : "text-[9px]"} text-gray-500 truncate`}>{kpi.label}</p>
+            <p className={`${isPdf ? "text-[13px]" : "text-sm"} font-bold text-gray-900 mt-0.5`}>{kpi.value}</p>
+            {kpi.change && <p className={`${isPdf ? "text-[8px]" : "text-[9px]"} font-medium mt-0.5`} style={{ color: kpi.changeColor }}>{kpi.change}</p>}
           </div>
         ))}
       </div>
 
       {/* Mini Trend Sparklines */}
-      <div className="grid grid-cols-4 gap-2 mb-3">
+      <div className={`grid grid-cols-4 ${isPdf ? "gap-1.5 mb-1.5" : "gap-2 mb-3"}`}>
         {[
           { label: 'IG リーチ推移', dataKey: 'ig', color: '#E1306C' },
           { label: 'LINE 友だち推移', dataKey: 'line', color: '#00B900' },
           { label: 'GA4 セッション推移', dataKey: 'ga4', color: '#4285F4' },
           { label: 'GBP 表示回数推移', dataKey: 'gbp', color: '#EA4335' },
         ].map((spark) => (
-          <div key={spark.dataKey} className="rounded-lg border border-gray-200 px-2 py-1.5">
+          <div key={spark.dataKey} className={`rounded-lg border border-gray-200 ${isPdf ? "px-1.5 py-1" : "px-2 py-1.5"}`}>
             <p className="text-[8px] text-gray-500 mb-0.5">{spark.label}</p>
-            <div style={{ height: isPdf ? 28 : 32 }}>
+            <div style={{ height: isPdf ? 24 : 32 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={sparkData} margin={{ left: 0, right: 0, top: 2, bottom: 0 }}>
                   <defs>
@@ -166,9 +166,9 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
       </div>
 
       {/* Main Grid */}
-      <div className={`grid grid-cols-3 ${isPdf ? "gap-2" : "gap-3"}`} style={{ fontSize: 11 }}>
+      <div className={`grid grid-cols-3 ${isPdf ? "gap-1.5 flex-1" : "gap-3"}`} style={{ fontSize: isPdf ? 10 : 11 }}>
         {/* Column 1: Fan Base */}
-        <div className={isPdf ? "space-y-2" : "space-y-3"}>
+        <div className={isPdf ? "space-y-1.5" : "space-y-3"}>
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
             <h3 className={`${isPdf ? "text-[11px]" : "text-xs"} font-bold text-gray-700 ${isPdf ? "mb-1" : "mb-2"} flex items-center gap-1`}>
               <span style={{ color: '#6366F1' }}>WHO</span> - ファン層分析
@@ -186,7 +186,7 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
             </div>
             <div className="mb-2">
               <p className="text-[9px] text-gray-500 mb-1">年齢層</p>
-              <div style={{ height: isPdf ? 80 : 100 }}>
+              <div style={{ height: isPdf ? 85 : 100 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={genderAge} layout="vertical" margin={{ left: 0, right: 5, top: 0, bottom: 0 }}>
                     <XAxis type="number" hide />
@@ -251,7 +251,7 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
         </div>
 
         {/* Column 2: Popular Content + Timing */}
-        <div className={isPdf ? "space-y-2" : "space-y-3"}>
+        <div className={isPdf ? "space-y-1.5" : "space-y-3"}>
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
             <h3 className={`${isPdf ? "text-[11px]" : "text-xs"} font-bold text-gray-700 ${isPdf ? "mb-1" : "mb-2"} flex items-center gap-1`}>
               <span style={{ color: '#E1306C' }}>WHAT</span> - 人気コンテンツ TOP3
@@ -384,18 +384,18 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
         </div>
 
         {/* Column 3: Reviews + Store Comparison */}
-        <div className={isPdf ? "space-y-2" : "space-y-3"}>
+        <div className={isPdf ? "space-y-1.5" : "space-y-3"}>
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
             <h3 className={`${isPdf ? "text-[11px]" : "text-xs"} font-bold text-gray-700 ${isPdf ? "mb-1" : "mb-2"} flex items-center gap-1`}>
               <span style={{ color: '#EA4335' }}>HOW</span> - ブランド評価
             </h3>
-            <div className="flex gap-3 mb-2">
+            <div className={`flex gap-3 ${isPdf ? "mb-1.5" : "mb-2"}`}>
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{gbpAvgRating.toFixed(1)}</p>
+                <p className={`${isPdf ? "text-xl" : "text-2xl"} font-bold text-gray-900`}>{gbpAvgRating.toFixed(1)}</p>
                 <p className="text-[9px]"><StarText rating={gbpAvgRating} /></p>
                 <p className="text-[8px] text-gray-400">{totalRatings}件</p>
               </div>
-              <div className="flex-1" style={{ height: isPdf ? 70 : 80 }}>
+              <div className="flex-1" style={{ height: isPdf ? 75 : 80 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={ratingData} layout="vertical" margin={{ left: 0, right: 5, top: 0, bottom: 0 }}>
                     <XAxis type="number" hide />
@@ -473,8 +473,8 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
             </table>
           </div>
 
-          <div className="rounded-lg border-2 border-indigo-200 bg-indigo-50 p-3">
-            <h3 className="text-xs font-bold text-indigo-700 mb-1.5">今月のアクション</h3>
+          <div className={`rounded-lg border-2 border-indigo-200 bg-indigo-50 ${isPdf ? "p-2" : "p-3"}`}>
+            <h3 className={`${isPdf ? "text-[10px]" : "text-xs"} font-bold text-indigo-700 ${isPdf ? "mb-1" : "mb-1.5"}`}>今月のアクション</h3>
             <ol className="space-y-0.5 text-[9px] text-gray-700 list-decimal list-inside">
               {[
                 posts[0] ? `「${posts[0].caption.slice(0, 15)}...」が高ENG → 類似コンテンツを強化` : 'ENG率の高い投稿タイプを分析',
@@ -491,7 +491,7 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
       </div>
 
       {/* Footer */}
-      <div className={isPdf ? "mt-auto pt-2 border-t border-gray-200 flex justify-between text-[8px] text-gray-400" : "absolute bottom-0 left-0 right-0 px-8 pb-4 pt-2 border-t border-gray-200 flex justify-between text-[8px] text-gray-400"}>
+      <div className={isPdf ? "px-8 pb-2 pt-1.5 border-t border-gray-200 flex justify-between text-[8px] text-gray-400" : "absolute bottom-0 left-0 right-0 px-8 pb-4 pt-2 border-t border-gray-200 flex justify-between text-[8px] text-gray-400"}>
         <span>Data Sources: Instagram Insights / LINE Official Account / Google Analytics 4 / Google Business Profile</span>
         <span>&copy; 2026 GNS inc. - SNS Analytics Dashboard</span>
       </div>

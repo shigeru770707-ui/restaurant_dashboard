@@ -11,7 +11,7 @@ const REPORT_LABELS: Record<ReportType, string> = {
   gbp: 'GBP',
 }
 
-const STORE_NAMES = ['渋谷店', '表参道店', '新宿店']
+const STORE_NAMES = ['海鮮居酒屋魚魯こ', '練馬鳥長・新潟', '魚とシャリUROKO']
 
 interface ExportDropdownProps {
   currentType: ReportType

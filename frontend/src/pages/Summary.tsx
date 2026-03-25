@@ -69,7 +69,7 @@ export default function Summary() {
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           主要指標
         </h3>
-        <div className="grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-1.5 lg:gap-2 lg:grid-cols-4">
           <KpiCard
             title="総リーチ"
             value={totalReach}
@@ -102,7 +102,7 @@ export default function Summary() {
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           メディア別スコア
         </h3>
-        <div className="grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-1.5 lg:gap-2 lg:grid-cols-4">
           <MediaScoreCard
             title="Instagram"
             icon="photo_camera"
@@ -191,7 +191,7 @@ export default function Summary() {
             </div>
 
             {/* Desktop: 3-column grid */}
-            <div className="hidden sm:grid sm:grid-cols-3 gap-4">
+            <div className="hidden sm:grid sm:grid-cols-3 gap-3">
               {topPosts.map((p, i) => {
                 const rankColors = ['#F9AB00', '#C0C0C0', '#CD7F32']
                 const typeColors: Record<string, string> = { FEED: '#E1306C', STORY: '#833AB4', REELS: '#F77737' }
@@ -317,7 +317,7 @@ export default function Summary() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Left: Rating Summary */}
             <div>
               <div className="flex items-center gap-3 mb-3">

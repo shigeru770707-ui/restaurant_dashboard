@@ -21,6 +21,11 @@ export interface InstagramPost {
   shares: number
   permalink: string
   thumbnail_url?: string
+  // ストーリー固有指標
+  replies?: number
+  exits?: number
+  taps_forward?: number
+  taps_back?: number
 }
 
 export interface InstagramSummary {

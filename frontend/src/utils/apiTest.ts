@@ -12,6 +12,9 @@ export async function testInstagram(
   if (!settings.accessToken || !settings.userId) {
     return { status: 'error', message: 'Access TokenとUser IDを入力してください' }
   }
+  if (!settings.appSecret) {
+    return { status: 'error', message: 'App Secretを入力してください（Meta App設定でApp Secret証明が必須です）' }
+  }
   try {
     const data = await postJson<{ ok: boolean; message: string }>('/api/test/instagram', {
       user_id: settings.userId,

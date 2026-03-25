@@ -160,7 +160,7 @@ export default function GBP() {
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           露出・集客指標
         </h3>
-        <div className="grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-1.5 lg:gap-2 lg:grid-cols-5">
           <KpiCard title="表示回数合計" value={totalViews} previousValue={prevTotalViews} color="#4285F4" />
           <KpiCard title="検索回数合計" value={totalQueries} previousValue={prevTotalQueries} color="#34A853" />
           <KpiCard title="アクション合計" value={totalActions} previousValue={prevTotalActions} color="#F9AB00" />
@@ -174,7 +174,7 @@ export default function GBP() {
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           アクション内訳
         </h3>
-        <div className="grid grid-cols-3 gap-2 sm:gap-5">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-1.5 lg:gap-2">
           <div className="rounded-xl border border-border bg-card p-4 text-center" style={{ boxShadow: CARD_SHADOW }}>
             <span className="material-symbols-outlined text-2xl md:text-3xl mb-2 block" style={{ color: '#4285F4' }}>language</span>
             <div className="text-xl md:text-2xl font-bold text-foreground">{formatNumber(current.actions_website)}</div>
@@ -204,7 +204,7 @@ export default function GBP() {
 
       {/* Impression Breakdown + Search Views Chart */}
       <section className="mb-6 md:mb-8">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {/* Impression Breakdown Pie */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -262,7 +262,7 @@ export default function GBP() {
 
       {/* Chart Row: Maps vs Search + Actions Trend */}
       <section className="mb-6 md:mb-8">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Maps vs Search 表示比較
@@ -366,7 +366,7 @@ export default function GBP() {
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           口コミ分析
         </h3>
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {/* Rating Distribution */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <div className="flex items-center justify-between mb-4">

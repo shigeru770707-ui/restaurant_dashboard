@@ -215,7 +215,7 @@ export default function Line() {
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           友だち指標
         </h3>
-        <div className="grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-1.5 lg:gap-2 lg:grid-cols-5">
           <KpiCard
             title="友だち数"
             value={current.followers}
@@ -297,7 +297,7 @@ export default function Line() {
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           配信サマリー
         </h3>
-        <div className="grid grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-1.5 lg:gap-2 lg:grid-cols-5">
           <div
             className="relative overflow-hidden rounded-xl border border-border bg-card p-3 sm:p-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
             style={{ boxShadow: CARD_SHADOW }}
@@ -343,7 +343,7 @@ export default function Line() {
 
       {/* Chart Row */}
       <section className="mb-6 md:mb-8">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               友だち数推移（過去6ヶ月）
@@ -388,7 +388,7 @@ export default function Line() {
 
       {/* Frequency & Heatmap Row */}
       <section className="mb-6 md:mb-8">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {/* Delivery Frequency Chart */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -644,7 +644,7 @@ export default function Line() {
 
       {/* Open Rate & Click Rate Trend Charts */}
       <section className="mb-6 md:mb-8">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {/* Open Rate Trend */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <div className="flex items-center justify-between mb-4">
@@ -706,7 +706,7 @@ export default function Line() {
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           友だち属性分析
         </h3>
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-3">
           {/* Gender - Donut Chart */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <h4 className="mb-3 text-xs font-semibold text-muted-foreground">性別分布</h4>

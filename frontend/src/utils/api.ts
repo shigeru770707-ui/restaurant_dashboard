@@ -60,6 +60,8 @@ export interface CredentialsSummary {
   instagram_user_id: string
   instagram_access_token: string
   instagram_access_token_raw: string
+  instagram_app_secret: string
+  instagram_app_secret_raw: string
 }
 
 export async function fetchCredentialsSummary(
@@ -129,7 +131,12 @@ export async function fetchInstagramPosts(
       saved: Number(r.saved ?? 0),
       shares: Number(r.shares ?? 0),
       permalink: String(r.permalink ?? '#'),
-      thumbnail_url: rawThumb ? String(rawThumb) : `https://picsum.photos/seed/${encodeURIComponent(id || 'post')}/400/400`,
+      thumbnail_url: rawThumb ? String(rawThumb) : '',
+      // ストーリー固有指標
+      replies: Number(r.replies ?? 0),
+      exits: Number(r.exits ?? 0),
+      taps_forward: Number(r.taps_forward ?? 0),
+      taps_back: Number(r.taps_back ?? 0),
     }
   })
 }

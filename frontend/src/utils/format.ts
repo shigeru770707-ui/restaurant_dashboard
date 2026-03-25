@@ -3,7 +3,10 @@ export function formatNumber(value: number): string {
 }
 
 export function formatPercent(value: number, decimals = 1): string {
-  return `${value.toFixed(decimals)}%`
+  const fixed = value.toFixed(decimals)
+  // 46.0% → 46%、3.5% → 3.5%
+  const clean = fixed.replace(/\.0+$/, '')
+  return `${clean}%`
 }
 
 export function formatCompact(value: number): string {

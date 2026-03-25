@@ -128,6 +128,8 @@ def get_credentials_summary(store_id: int):
         "instagram_user_id": creds.get("instagram_user_id", ""),
         "instagram_access_token": _mask(creds.get("instagram_access_token")),
         "instagram_access_token_raw": creds.get("instagram_access_token", ""),
+        "instagram_app_secret": _mask(creds.get("instagram_app_secret")),
+        "instagram_app_secret_raw": creds.get("instagram_app_secret", ""),
     }
 
 
@@ -370,7 +372,9 @@ def test_instagram_connection(req: InstagramTestRequest):
 
         import requests as http_requests
 
+        url = f"https://graph.facebook.com/v21.0/{req.user_id}"
         params = {"access_token": req.access_token, "fields": "id,username"}
+
         if req.app_secret:
             proof = hmac.HMAC(
                 req.app_secret.encode(),
@@ -379,18 +383,36 @@ def test_instagram_connection(req: InstagramTestRequest):
             ).hexdigest()
             params["appsecret_proof"] = proof
 
-        resp = http_requests.get(
-            f"https://graph.facebook.com/v21.0/{req.user_id}",
-            params=params,
-            timeout=30,
-        )
-        resp.raise_for_status()
+        resp = http_requests.get(url, params=params, timeout=30)
+
+        # appsecret_proof が無効な場合、proofなしでリトライ
+        if resp.status_code != 200 and req.app_secret:
+            error_data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+            error_msg = error_data.get("error", {}).get("message", "")
+            if "appsecret_proof" in error_msg.lower() or "invalid" in error_msg.lower():
+                logger.warning("appsecret_proof failed, retrying without proof")
+                params_no_proof = {"access_token": req.access_token, "fields": "id,username"}
+                resp = http_requests.get(url, params=params_no_proof, timeout=30)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    username = data.get("username", "unknown")
+                    return {
+                        "ok": True,
+                        "message": f"接続成功: @{username} (ID: {data.get('id')})  ⚠️ App Secretが Access Token のアプリと一致しません。Meta Developers Console でApp Secretを確認してください。",
+                    }
+
+        if resp.status_code != 200:
+            error_data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+            error_msg = error_data.get("error", {}).get("message", f"HTTPステータス {resp.status_code}")
+            error_type = error_data.get("error", {}).get("type", "")
+            detail = f"{error_type}: {error_msg}" if error_type else error_msg
+            return {"ok": False, "message": f"接続失敗: {detail}"}
         data = resp.json()
         username = data.get("username", "unknown")
         return {"ok": True, "message": f"接続成功: @{username} (ID: {data.get('id')})"}
     except Exception as e:
         logger.exception("Instagram connection test failed")
-        return {"ok": False, "message": f"接続失敗: {e}"}
+        return {"ok": False, "message": f"接続失敗: {type(e).__name__}: {e}"}
 
 
 @app.post("/api/test/line", dependencies=[Depends(verify_api_key)])
@@ -497,18 +519,36 @@ def fetch_instagram_data(req: InstagramFetchRequest):
             app_secret=req.app_secret or "",
         )
 
+        # トークンリフレッシュは最初に1回だけ
+        client.refresh_token_if_needed()
+
+        # 日次メトリクス取得（reach, views, followers）
         fetched_dates = 0
         for i in range(req.days):
             date = (datetime.now().date() - timedelta(days=i + 1)).isoformat()
             try:
-                client.fetch_all(date)
-                fetched_dates += 1
+                saved = client.fetch_account_insights(date)
+                if saved:
+                    fetched_dates += 1
             except Exception as e:
                 logger.warning(f"Instagram fetch failed for {date}: {e}")
 
+        # メディアインサイトは日付非依存なので1回だけ
+        try:
+            client.fetch_media_insights()
+        except Exception as e:
+            logger.warning(f"Instagram media fetch failed: {e}")
+
+        # ストーリー取得（24時間以内のアクティブストーリー）
+        story_count = 0
+        try:
+            story_count = client.fetch_stories()
+        except Exception as e:
+            logger.warning(f"Instagram stories fetch failed: {e}")
+
         return {
             "ok": True,
-            "message": f"Instagramデータ取得完了: {fetched_dates}日分のデータを保存しました",
+            "message": f"Instagramデータ取得完了: {fetched_dates}日分のデータ + ストーリー{story_count}件を保存しました",
         }
     except Exception as e:
         logger.exception("Instagram data fetch failed")

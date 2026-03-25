@@ -276,6 +276,7 @@
   .report-content {
     width: 297mm !important;
     height: 210mm !important;
+    max-height: 210mm !important;
     min-height: unset !important;
     padding: 8mm !important;
     margin: 0 !important;
@@ -283,7 +284,12 @@
     box-sizing: border-box !important;
     overflow: hidden !important;
     position: relative !important;
-    display: flex !important;
-    flex-direction: column !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .report-content * {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
