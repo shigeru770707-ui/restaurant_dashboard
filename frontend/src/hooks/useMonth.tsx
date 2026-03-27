@@ -1,5 +1,5 @@
 // Backward-compatible re-export — all pages can keep using useMonth()
-export { PeriodProvider as MonthProvider } from './usePeriod'
+
 
 import { usePeriod } from './usePeriod'
 

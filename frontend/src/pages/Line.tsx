@@ -32,7 +32,7 @@ import { formatNumber, formatPercent } from '@/utils/format'
 
 const LINE_GREEN = '#00B900'
 const LINE_DARK = '#00820A'
-const CLICK_BLUE = '#3B82F6'
+const CLICK_BLUE = '#5B8A8A'
 const BLOCK_RED = '#EF4444'
 const BENCHMARK_OPEN_RATE = 60.0 // 飲食業界LINE平均開封率
 const BLOCK_WARNING_THRESHOLD = 20.0 // ブロック率警告閾値
@@ -46,24 +46,24 @@ const TOOLTIP_STYLE = {
   fontSize: '13px',
 }
 
-const CARD_SHADOW = '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)'
+const CARD_SHADOW = '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)'
 const GRID_COLOR = 'var(--border)'
 const TICK_COLOR = 'var(--muted-foreground)'
 
 const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
 const HOUR_LABELS = ['8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21']
 
-const DEMO_COLORS = ['#00B900', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6']
-const GENDER_COLORS = ['#3B82F6', '#EC4899', '#9CA3AF'] // male, female, other
-const AREA_COLORS = ['#00B900', '#3B82F6', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#EF4444', '#64748B']
+const DEMO_COLORS = ['#00B900', '#5B78A8', '#C06A30', '#B8534B', '#8B6CAD']
+const GENDER_COLORS = ['#5B78A8', '#B8534B', '#8C7E72'] // male, female, other
+const AREA_COLORS = ['#00B900', '#5B78A8', '#C06A30', '#8B6CAD', '#B8534B', '#2E8B6A', '#6A9B50', '#7A8F9E']
 
 const MSG_TYPE_CONFIG: Record<LineMessageType, { label: string; color: string; icon: string }> = {
-  text: { label: 'テキスト', color: '#6B7280', icon: 'chat_bubble' },
-  image: { label: '画像', color: '#3B82F6', icon: 'image' },
-  rich: { label: 'リッチ', color: '#22C55E', icon: 'dashboard' },
-  coupon: { label: 'クーポン', color: '#F59E0B', icon: 'confirmation_number' },
-  video: { label: '動画', color: '#8B5CF6', icon: 'play_circle' },
-  card: { label: 'カード', color: '#06B6D4', icon: 'web_stories' },
+  text: { label: 'テキスト', color: '#8C7E72', icon: 'chat_bubble' },
+  image: { label: '画像', color: '#5B78A8', icon: 'image' },
+  rich: { label: 'リッチ', color: '#2E8B6A', icon: 'dashboard' },
+  coupon: { label: 'クーポン', color: '#C06A30', icon: 'confirmation_number' },
+  video: { label: '動画', color: '#8B6CAD', icon: 'play_circle' },
+  card: { label: 'カード', color: '#6A9B50', icon: 'web_stories' },
 }
 
 export default function Line() {
@@ -88,11 +88,13 @@ export default function Line() {
     ? filterByDateRange(allMessages, effectiveStart, effectiveEnd)
     : allMessages
 
-  const followerDiff = current.followers - previous.followers
-  const oldestTrend = trend[0]
-  const halfYearFollowerDiff = oldestTrend ? current.followers - oldestTrend.followers : 0
-  const blockRate = current.followers > 0 ? (current.blocks / current.followers) * 100 : 0
-  const prevBlockRate = previous.followers > 0 ? (previous.blocks / previous.followers) * 100 : 0
+  const hasPreviousData = previous.followers > 0
+  const followerDiff = hasPreviousData ? current.followers - previous.followers : null
+  const oldestTrend = trend.length > 1 ? trend[0] : null
+  const hasOldestData = oldestTrend && oldestTrend.followers > 0
+  const halfYearFollowerDiff = hasOldestData ? current.followers - oldestTrend.followers : null
+  const blockRate = (current.followers + current.blocks) > 0 ? (current.blocks / (current.followers + current.blocks)) * 100 : 0
+  const prevBlockRate = (previous.followers + previous.blocks) > 0 ? (previous.blocks / (previous.followers + previous.blocks)) * 100 : 0
   const isBlockWarning = blockRate > BLOCK_WARNING_THRESHOLD
 
   const totalDelivered = messages.reduce((acc, m) => acc + m.delivered, 0)
@@ -100,12 +102,8 @@ export default function Line() {
   const totalClicks = messages.reduce((acc, m) => acc + m.unique_clicks, 0)
   const openRate = totalDelivered > 0 ? (totalImpressions / totalDelivered) * 100 : 0
   const clickRate = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
-  const avgOpenRate = messages.length > 0
-    ? messages.reduce((acc, m) => acc + (m.delivered > 0 ? (m.unique_impressions / m.delivered) * 100 : 0), 0) / messages.length
-    : 0
-  const avgClickRate = messages.length > 0
-    ? messages.reduce((acc, m) => acc + (m.unique_impressions > 0 ? (m.unique_clicks / m.unique_impressions) * 100 : 0), 0) / messages.length
-    : 0
+  // 開封率・CTRは加重平均（totalImpressions / totalDelivered）に統一。
+  // 非加重平均（単純平均）は配信数の差を無視するため不採用。
 
   // Top message (highest open rate)
   const topMsgIdx = messages.length > 0
@@ -191,6 +189,10 @@ export default function Line() {
   return (
     <div className="animate-in fade-in duration-400">
       <Header title="LINE公式アカウント 分析" brandIcon={<LineIcon size={22} />} color="#00B900" lightBg="#E6F9E6" reportType="line" />
+      <div className="mb-4 flex items-center gap-2">
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700">全社共通</span>
+        <span className="text-xs text-muted-foreground">全店舗で共有のLINE公式アカウント</span>
+      </div>
 
       {!loading && !hasAnyData && (
         <div className="mb-6 rounded-xl border border-border bg-card p-6 text-center">
@@ -211,7 +213,7 @@ export default function Line() {
       )}
 
       {/* Friends KPI Cards */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           友だち指標
         </h3>
@@ -230,12 +232,18 @@ export default function Line() {
             <p className="text-[11px] md:text-[13px] font-medium text-muted-foreground mb-1">
               友だち増減（前月比）
             </p>
-            <p className="text-2xl md:text-[34px] font-bold text-foreground leading-tight">
-              {followerDiff >= 0 ? '+' : ''}{formatNumber(followerDiff)}
-            </p>
-            <div className="mt-2">
-              <TrendBadge currentValue={current.followers} previousValue={previous.followers} />
-            </div>
+            {followerDiff !== null ? (
+              <>
+                <p className="text-2xl md:text-[34px] font-bold text-foreground leading-tight">
+                  {followerDiff >= 0 ? '+' : ''}{formatNumber(followerDiff)}
+                </p>
+                <div className="mt-2">
+                  <TrendBadge currentValue={current.followers} previousValue={previous.followers} />
+                </div>
+              </>
+            ) : (
+              <p className="text-2xl md:text-[34px] font-bold text-muted-foreground/40 leading-tight">-</p>
+            )}
           </div>
           <div
             className="relative overflow-hidden rounded-xl border border-border bg-card p-3 sm:p-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
@@ -245,13 +253,20 @@ export default function Line() {
             <p className="text-[11px] md:text-[13px] font-medium text-muted-foreground mb-1">
               友だち増減（6ヶ月比）
             </p>
-            <p className="text-2xl md:text-[34px] font-bold text-foreground leading-tight">
-              {halfYearFollowerDiff >= 0 ? '+' : ''}{formatNumber(halfYearFollowerDiff)}
-            </p>
-            {oldestTrend && (
-              <div className="mt-2">
-                <TrendBadge currentValue={current.followers} previousValue={oldestTrend.followers} />
-              </div>
+            {halfYearFollowerDiff !== null && oldestTrend ? (
+              <>
+                <p className="text-2xl md:text-[34px] font-bold text-foreground leading-tight">
+                  {halfYearFollowerDiff >= 0 ? '+' : ''}{formatNumber(halfYearFollowerDiff)}
+                </p>
+                <div className="mt-2">
+                  <TrendBadge currentValue={current.followers} previousValue={oldestTrend.followers} />
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-2xl md:text-[34px] font-bold text-muted-foreground/40 leading-tight">-</p>
+                <span className="text-[10px] text-muted-foreground/60 mt-2 block">※データ蓄積中</span>
+              </>
             )}
           </div>
           {/* Block Rate with Warning */}
@@ -293,7 +308,7 @@ export default function Line() {
       </section>
 
       {/* Delivery Summary Section */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           配信サマリー
         </h3>
@@ -314,14 +329,14 @@ export default function Line() {
             className="relative overflow-hidden rounded-xl border border-border bg-card p-3 sm:p-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
             style={{ boxShadow: CARD_SHADOW }}
           >
-            <div className="absolute top-0 left-0 h-[3px] w-full" style={{ background: avgOpenRate >= BENCHMARK_OPEN_RATE ? '#22c55e' : '#F59E0B' }} />
-            <p className="text-[11px] md:text-[13px] font-medium text-muted-foreground mb-1">平均開封率</p>
+            <div className="absolute top-0 left-0 h-[3px] w-full" style={{ background: openRate >= BENCHMARK_OPEN_RATE ? '#22c55e' : '#F59E0B' }} />
+            <p className="text-[11px] md:text-[13px] font-medium text-muted-foreground mb-1">開封率（加重平均）</p>
             <p className="text-2xl md:text-[34px] font-bold text-foreground leading-tight">
-              {formatPercent(avgOpenRate)}
+              {formatPercent(openRate)}
             </p>
             <p className="text-[10px] text-muted-foreground mt-1">
               業界平均: {BENCHMARK_OPEN_RATE}%
-              {avgOpenRate >= BENCHMARK_OPEN_RATE ? (
+              {openRate >= BENCHMARK_OPEN_RATE ? (
                 <span className="text-success ml-1">上回っています</span>
               ) : (
                 <span className="text-warning ml-1">下回っています</span>
@@ -333,16 +348,16 @@ export default function Line() {
             style={{ boxShadow: CARD_SHADOW }}
           >
             <div className="absolute top-0 left-0 h-[3px] w-full" style={{ background: CLICK_BLUE }} />
-            <p className="text-[11px] md:text-[13px] font-medium text-muted-foreground mb-1">平均クリック率</p>
+            <p className="text-[11px] md:text-[13px] font-medium text-muted-foreground mb-1">CTR（加重平均）</p>
             <p className="text-2xl md:text-[34px] font-bold text-foreground leading-tight">
-              {formatPercent(avgClickRate)}
+              {formatPercent(clickRate)}
             </p>
           </div>
         </div>
       </section>
 
       {/* Chart Row */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -387,7 +402,7 @@ export default function Line() {
       </section>
 
       {/* Frequency & Heatmap Row */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {/* Delivery Frequency Chart */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
@@ -484,7 +499,7 @@ export default function Line() {
       </section>
 
       {/* Message Performance Table */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -547,7 +562,7 @@ export default function Line() {
                                 TOP
                               </span>
                             )}
-                            {m.date.slice(5)} {String(m.hour).padStart(2, '0')}:00
+                            {m.date.slice(5)} {String(m.hour).padStart(2, '0')}:{String(m.minute ?? 0).padStart(2, '0')}
                           </td>
                           <td className="p-2 md:p-3 border-b border-border text-foreground">{formatNumber(m.delivered)}</td>
                           <td className="p-2 md:p-3 border-b border-border text-foreground">{formatNumber(m.unique_impressions)}</td>
@@ -643,7 +658,7 @@ export default function Line() {
       </section>
 
       {/* Open Rate & Click Rate Trend Charts */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {/* Open Rate Trend */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>

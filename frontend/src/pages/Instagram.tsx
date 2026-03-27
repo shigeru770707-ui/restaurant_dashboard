@@ -35,7 +35,8 @@ import { formatNumber, formatPercent } from '@/utils/format'
 const IG_PRIMARY = '#E1306C'
 const IG_SECONDARY = '#833AB4'
 const IG_TERTIARY = '#F77737'
-const BENCHMARK_ENG_RATE = 2.2 // 飲食業界平均エンゲージメント率
+// 飲食業界平均エンゲージメント率（shares含む独自定義での参考値、定期更新推奨）
+const BENCHMARK_ENG_RATE = 2.2
 
 const TOOLTIP_STYLE = {
   background: 'var(--card)',
@@ -46,7 +47,7 @@ const TOOLTIP_STYLE = {
   fontSize: '13px',
 }
 
-const CARD_SHADOW = '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)'
+const CARD_SHADOW = '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)'
 const GRID_COLOR = 'var(--border)'
 const TICK_COLOR = 'var(--muted-foreground)'
 
@@ -85,18 +86,18 @@ export default function Instagram() {
   const { periodType, effectiveStart, effectiveEnd } = usePeriod()
   const { igStoreIndex, setIgStoreIndex } = useStore()
   const { settings } = useApiSettings()
-  const { data: allData } = useDashboardData(selectedMonth, igStoreIndex)
+  const { data: allData, stores: dbStores } = useDashboardData(selectedMonth, igStoreIndex)
   const data = allData.instagram
 
   const current = data.current
   const previous = data.previous
   const trend = data.trend
 
-  // Filter posts by the effective date range
+  // Filter posts by the effective date range or selected month
   const allPosts = data.posts
   const posts = periodType === 'dateRange'
     ? filterByDateRange(allPosts, effectiveStart, effectiveEnd, 'timestamp')
-    : allPosts
+    : allPosts.filter((p) => p.timestamp.slice(0, 7) === selectedMonth)
 
   // Post type counts
   const feedCount = posts.filter(p => p.media_product_type === 'FEED').length
@@ -108,9 +109,11 @@ export default function Instagram() {
     ? posts
     : posts.filter(p => p.media_product_type === postTypeFilter)
 
-  const followerDiff = current.followers_count - previous.followers_count
-  const oldestTrend = trend[0]
-  const yoyFollowers = oldestTrend ? current.followers_count - oldestTrend.followers_count : 0
+  const hasPreviousFollowers = previous.followers_count > 0
+  const followerDiff = hasPreviousFollowers ? current.followers_count - previous.followers_count : null
+  const oldestTrend = trend.length > 1 ? trend[0] : null
+  const hasOldestFollowers = oldestTrend && oldestTrend.followers_count > 0
+  const yoyFollowers = hasOldestFollowers ? current.followers_count - oldestTrend.followers_count : null
 
   const trendChartData = trend.map((item) => ({
     month: item.date.slice(5),
@@ -121,6 +124,8 @@ export default function Instagram() {
 
   const isStoryFilter = postTypeFilter === 'STORY'
 
+  // ENG率 = (likes + comments + saved + shares) / reach * 100（shares含む独自定義）
+  // ストーリーは (replies + taps_back) / reach * 100
   const postsWithEng = filteredPosts
     .map((p) => {
       const isStory = p.media_product_type === 'STORY'
@@ -220,10 +225,10 @@ export default function Instagram() {
     <div className="animate-in fade-in duration-400">
       <Header title="Instagram 分析" brandIcon={<InstagramIcon size={22} />} color="#E1306C" lightBg="#FCE7EF" reportType="instagram" storeIndex={igStoreIndex} />
 
-      {settings.instagram.length > 1 && (
+      {dbStores.length > 1 && (
         <div className="mb-4 md:mb-6">
           <StoreSelector
-            stores={settings.instagram}
+            stores={dbStores.map((s) => ({ storeName: s.name }))}
             selectedIndex={igStoreIndex}
             onSelect={setIgStoreIndex}
             color="#E1306C"
@@ -232,7 +237,7 @@ export default function Instagram() {
       )}
 
       {/* Growth Section */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <SectionHeader title="成長指標" icon="trending_up" color={IG_PRIMARY} withDivider />
         <div className="grid grid-cols-2 gap-1.5 sm:gap-1.5 lg:gap-2 lg:grid-cols-4">
           <KpiCard
@@ -252,16 +257,22 @@ export default function Instagram() {
             <p className="text-[11px] md:text-[13px] font-medium text-muted-foreground mb-1">
               フォロワー増減（前月比）
             </p>
-            <p className="text-2xl md:text-[34px] font-bold text-foreground leading-tight">
-              {followerDiff >= 0 ? '+' : ''}
-              {formatNumber(followerDiff)}
-            </p>
-            <div className="mt-2">
-              <TrendBadge
-                currentValue={current.followers_count}
-                previousValue={previous.followers_count}
-              />
-            </div>
+            {followerDiff !== null ? (
+              <>
+                <p className="text-2xl md:text-[34px] font-bold text-foreground leading-tight">
+                  {followerDiff >= 0 ? '+' : ''}
+                  {formatNumber(followerDiff)}
+                </p>
+                <div className="mt-2">
+                  <TrendBadge
+                    currentValue={current.followers_count}
+                    previousValue={previous.followers_count}
+                  />
+                </div>
+              </>
+            ) : (
+              <p className="text-2xl md:text-[34px] font-bold text-muted-foreground/40 leading-tight">-</p>
+            )}
           </div>
           <div
             className="relative overflow-hidden rounded-xl border border-border bg-card p-3 sm:p-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
@@ -274,20 +285,27 @@ export default function Instagram() {
             <p className="text-[11px] md:text-[13px] font-medium text-muted-foreground mb-1">
               フォロワー増減（{trend.length > 3 ? '6ヶ月' : `${trend.length}ヶ月`}比）
             </p>
-            <p className="text-2xl md:text-[34px] font-bold text-foreground leading-tight">
-              {yoyFollowers >= 0 ? '+' : ''}
-              {formatNumber(yoyFollowers)}
-            </p>
-            {oldestTrend && (
-              <div className="mt-2 flex items-center gap-1.5">
-                <TrendBadge
-                  currentValue={current.followers_count}
-                  previousValue={oldestTrend.followers_count}
-                />
-                {trend.length <= 2 && (
-                  <span className="text-[10px] text-muted-foreground/60">※データ蓄積中</span>
-                )}
-              </div>
+            {yoyFollowers !== null && oldestTrend ? (
+              <>
+                <p className="text-2xl md:text-[34px] font-bold text-foreground leading-tight">
+                  {yoyFollowers >= 0 ? '+' : ''}
+                  {formatNumber(yoyFollowers)}
+                </p>
+                <div className="mt-2 flex items-center gap-1.5">
+                  <TrendBadge
+                    currentValue={current.followers_count}
+                    previousValue={oldestTrend.followers_count}
+                  />
+                  {trend.length <= 2 && (
+                    <span className="text-[10px] text-muted-foreground/60">※データ蓄積中</span>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-2xl md:text-[34px] font-bold text-muted-foreground/40 leading-tight">-</p>
+                <span className="text-[10px] text-muted-foreground/60 mt-2 block">※データ蓄積中</span>
+              </>
             )}
           </div>
           <KpiCard
@@ -300,7 +318,7 @@ export default function Instagram() {
       </section>
 
       {/* Post Count & Engagement Overview */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <SectionHeader title="投稿サマリー" icon="grid_view" color={IG_PRIMARY} withDivider />
         <div className="grid grid-cols-2 gap-1.5 sm:gap-1.5 lg:gap-2 lg:grid-cols-5">
           <div
@@ -375,7 +393,7 @@ export default function Instagram() {
       </section>
 
       {/* Post Ranking with Thumbnails */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
             <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
@@ -449,6 +467,16 @@ export default function Instagram() {
                           </div>
                         )}
 
+                        {/* メディアタイプバッジ */}
+                        {post.media_product_type !== 'FEED' && (
+                          <div className={`absolute ${isFirst ? 'top-3 right-3' : 'top-1 right-1'}`}>
+                            <span className={`inline-flex items-center rounded-md bg-black/60 text-white font-medium backdrop-blur-sm ${
+                              isFirst ? 'px-2 py-0.5 text-[10px]' : 'px-1.5 py-0.5 text-[9px]'
+                            }`}>
+                              {post.media_product_type === 'STORY' ? 'ストーリー' : 'リール'}
+                            </span>
+                          </div>
+                        )}
                         {/* ランクバッジ — 1位 */}
                         {isFirst && (
                           <div className="absolute top-3 left-3">
@@ -552,7 +580,7 @@ export default function Instagram() {
       </section>
 
       {/* Visibility Section */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
           <span className="material-symbols-outlined text-sm" style={{ color: IG_SECONDARY }}>visibility</span>
           露出指標
@@ -598,7 +626,7 @@ export default function Instagram() {
       </section>
 
       {/* Engagement Section */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
           <span className="material-symbols-outlined text-sm" style={{ color: IG_PRIMARY }}>favorite</span>
           エンゲージメント指標
@@ -623,7 +651,7 @@ export default function Instagram() {
       </section>
 
       {/* Charts Row */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
@@ -672,7 +700,7 @@ export default function Instagram() {
       </section>
 
       {/* Post Frequency & Heatmap Row */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {/* Post Frequency Chart */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
@@ -767,7 +795,7 @@ export default function Instagram() {
       </section>
 
       {/* Content Performance Table */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">

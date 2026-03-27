@@ -114,6 +114,7 @@ def seed():
             active_users = int(sessions * random.uniform(0.75, 0.95))
             new_users = int(active_users * random.uniform(0.3, 0.5))
             page_views = int(sessions * random.uniform(2.0, 3.5))
+            conversions = int(sessions * random.uniform(0.02, 0.08))
             upsert_ga4_metrics({
                 "date": d,
                 "store_id": store_id,
@@ -123,6 +124,7 @@ def seed():
                 "page_views": max(page_views, 15),
                 "bounce_rate": round(random.uniform(35, 55), 1),
                 "avg_session_duration": round(random.uniform(60, 180), 1),
+                "conversions": max(conversions, 0),
             })
 
             # GA4 流入元

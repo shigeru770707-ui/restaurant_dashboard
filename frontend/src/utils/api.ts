@@ -6,7 +6,7 @@
 
 import type { InstagramInsight, InstagramPost } from '@/types/instagram'
 import type { LineFollowerInsight, LineMessageInsight, LineMessageType } from '@/types/line'
-import type { GA4Metric, GA4TrafficSource, GA4Page } from '@/types/ga4'
+import type { GA4Metric, GA4TrafficSource, GA4Page, GA4OverviewData, GA4StoreDetailData, GA4CompareData, GA4StoreInfo, GA4CustomEvent } from '@/types/ga4'
 import type { GBPMetric } from '@/types/gbp'
 
 const BASE = '/api'
@@ -60,8 +60,11 @@ export interface CredentialsSummary {
   instagram_user_id: string
   instagram_access_token: string
   instagram_access_token_raw: string
+  instagram_app_id: string
   instagram_app_secret: string
   instagram_app_secret_raw: string
+  instagram_token_expires_at: string
+  instagram_auto_refresh_days: number
 }
 
 export async function fetchCredentialsSummary(
@@ -101,7 +104,7 @@ export async function fetchInstagramMetrics(
     date: String(r.date ?? '').slice(0, 7), // YYYY-MM
     followers_count: Number(r.followers_count ?? 0),
     reach: Number(r.reach ?? 0),
-    impressions: Number(r.views ?? 0),
+    impressions: Number(r.views ?? 0), // DB列名はviewsだがInstagram API由来のimpressions相当値
     profile_views: Number(r.profile_views ?? 0),
     website_clicks: Number(r.website_clicks ?? 0),
   }))
@@ -170,15 +173,20 @@ export async function fetchLineMessages(
     `${BASE}/line/messages?${params}`,
   )
   return raw.map((r) => {
+    const sentAt = r.sent_at ? String(r.sent_at) : ''
     const dateStr = String(r.date ?? '')
-    const d = new Date(dateStr)
+    // sent_at があればそこから時刻を取得、なければ date から
+    const d = sentAt ? new Date(sentAt) : new Date(dateStr)
+    const hour = !isNaN(d.getTime()) ? d.getHours() : 12
+    const minute = !isNaN(d.getTime()) ? d.getMinutes() : 0
     return {
       date: dateStr.slice(0, 10),
       delivered: Number(r.delivered ?? 0),
       unique_impressions: Number(r.unique_impressions ?? 0),
       unique_clicks: Number(r.unique_clicks ?? 0),
-      hour: d.getHours() || 12,
-      day_of_week: (d.getDay() + 6) % 7, // Monday=0
+      hour,
+      minute,
+      day_of_week: !isNaN(d.getTime()) ? (d.getDay() + 6) % 7 : 0, // Monday=0
       title: r.title ? String(r.title) : undefined,
       body_preview: r.body_preview ? String(r.body_preview) : undefined,
       message_type: r.message_type ? String(r.message_type) as LineMessageType : undefined,
@@ -263,6 +271,46 @@ export async function fetchGA4Pages(
   }))
 }
 
+// ---------- GA4 Store Analytics ----------
+
+export async function fetchGA4Overview(
+  startDate: string,
+  endDate: string,
+): Promise<GA4OverviewData> {
+  const params = new URLSearchParams({ start_date: startDate, end_date: endDate })
+  return fetchJson<GA4OverviewData>(`${BASE}/ga4/overview?${params}`)
+}
+
+export async function fetchGA4StoreDetail(
+  storeId: number,
+  startDate: string,
+  endDate: string,
+): Promise<GA4StoreDetailData> {
+  const params = new URLSearchParams({ start_date: startDate, end_date: endDate })
+  return fetchJson<GA4StoreDetailData>(`${BASE}/ga4/stores/${storeId}/detail?${params}`)
+}
+
+export async function fetchGA4Compare(
+  startDate: string,
+  endDate: string,
+): Promise<GA4CompareData> {
+  const params = new URLSearchParams({ start_date: startDate, end_date: endDate })
+  return fetchJson<GA4CompareData>(`${BASE}/ga4/compare?${params}`)
+}
+
+export async function fetchGA4Stores(): Promise<GA4StoreInfo[]> {
+  return fetchJson<GA4StoreInfo[]>(`${BASE}/ga4/stores-with-ga4`)
+}
+
+async function fetchGA4CustomEvents(
+  storeId: number,
+  startDate: string,
+  endDate: string,
+): Promise<GA4CustomEvent[]> {
+  const params = new URLSearchParams({ store_id: String(storeId), start_date: startDate, end_date: endDate })
+  return fetchJson<GA4CustomEvent[]>(`${BASE}/ga4/custom-events?${params}`)
+}
+
 // ---------- GBP ----------
 
 export async function fetchGBPMetrics(
@@ -288,7 +336,7 @@ export async function fetchGBPMetrics(
 
 // ---------- Recommendations ----------
 
-export async function fetchRecommendations(
+async function fetchRecommendations(
   storeId: number,
   startDate: string,
   endDate: string,

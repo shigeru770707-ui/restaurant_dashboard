@@ -1,14 +1,14 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useMonth } from '@/hooks/useMonth'
+import { fetchStores } from '@/utils/api'
+import type { Store } from '@/utils/api'
 import type { ReportType } from '@/components/common/ExportDropdown'
 import ReportSummary from './reports/ReportSummary'
 import ReportInstagram from './reports/ReportInstagram'
 import ReportLine from './reports/ReportLine'
 import ReportGA4 from './reports/ReportGA4'
 import ReportGBP from './reports/ReportGBP'
-
-const STORE_NAMES = ['海鮮居酒屋魚魯こ', '練馬鳥長・新潟', '魚とシャリUROKO']
 
 const REPORT_TYPE_LABELS: Record<ReportType, string> = {
   summary: '全体サマリー',
@@ -24,12 +24,19 @@ export default function Report() {
   const { selectedMonth } = useMonth()
   const reportRef = useRef<HTMLDivElement>(null)
   const [isPdf, setIsPdf] = useState(false)
+  const [stores, setStores] = useState<Store[]>([])
+
+  useEffect(() => {
+    fetchStores().then(setStores).catch(() => setStores([]))
+  }, [])
+
+  const storeNames = stores.map((s) => s.name)
 
   const reportType = (searchParams.get('type') || 'summary') as ReportType
-  const selectedStore = Math.min(
-    parseInt(searchParams.get('store') || '0', 10),
-    STORE_NAMES.length - 1,
-  )
+  const storeParam = parseInt(searchParams.get('store') || '0', 10)
+  // storeParam is treated as an index into the stores array
+  const selectedStore = stores.length > 0 ? Math.min(storeParam, stores.length - 1) : 0
+  const selectedStoreId = stores.length > 0 ? stores[selectedStore].id : 0
 
   const updateParams = (type: ReportType, store: number) => {
     setSearchParams({ type, store: String(store) }, { replace: true })
@@ -55,7 +62,7 @@ export default function Report() {
         const now = new Date()
         const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
         const typeLabel = REPORT_TYPE_LABELS[reportType].replace(/\s/g, '')
-        document.title = `${typeLabel}_${STORE_NAMES[selectedStore]}_${dateStr}`
+        document.title = `${typeLabel}_${storeNames[selectedStore] ?? ''}_${dateStr}`
         window.print()
         document.title = originalTitle
         el.style.zoom = ''
@@ -70,9 +77,10 @@ export default function Report() {
   const reportProps = {
     selectedMonth,
     storeIndex: selectedStore,
-    storeName: STORE_NAMES[selectedStore],
+    storeId: selectedStoreId,
+    storeName: storeNames[selectedStore] ?? '',
     generatedDate,
-    storeNames: STORE_NAMES,
+    storeNames,
     isPdf,
   }
 
@@ -102,7 +110,7 @@ export default function Report() {
             onChange={(e) => updateParams(reportType, Number(e.target.value))}
             className="rounded-lg bg-white px-3 py-2 text-sm shadow-sm border border-gray-200"
           >
-            {STORE_NAMES.map((name, i) => (
+            {storeNames.map((name, i) => (
               <option key={i} value={i}>{name}</option>
             ))}
           </select>

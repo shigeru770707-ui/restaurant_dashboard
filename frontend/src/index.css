@@ -5,92 +5,92 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.75rem;
-  /* Base */
-  --background: #F8F9FA;
-  --foreground: #111827;
+  --radius: 0.625rem;
+  /* Base — ddp-store-system アースカラー */
+  --background: #F7F5F2;
+  --foreground: #3D3028;
   /* Card / Surface */
   --card: #FFFFFF;
-  --card-foreground: #111827;
+  --card-foreground: #3D3028;
   --popover: #FFFFFF;
-  --popover-foreground: #111827;
-  /* Primary */
-  --primary: #6366f1;
+  --popover-foreground: #3D3028;
+  /* Primary — オレンジ */
+  --primary: #CC5500;
   --primary-foreground: #ffffff;
   /* Secondary */
-  --secondary: #F3F4F6;
-  --secondary-foreground: #111827;
+  --secondary: #E87428;
+  --secondary-foreground: #ffffff;
   /* Muted */
-  --muted: #F3F4F6;
-  --muted-foreground: #6B7280;
+  --muted: #F0EBE5;
+  --muted-foreground: #8C7E72;
   /* Accent */
-  --accent: #F3F4F6;
-  --accent-foreground: #111827;
+  --accent: #FFF0E5;
+  --accent-foreground: #CC5500;
   /* Destructive */
-  --destructive: #EF4444;
+  --destructive: #dc2626;
   /* Border / Input */
-  --border: #E5E7EB;
-  --input: #E5E7EB;
-  --ring: #6366f1;
-  /* Chart */
+  --border: #D9CFC5;
+  --input: #D9CFC5;
+  --ring: #CC5500;
+  /* Chart — プラットフォーム色は維持 */
   --chart-1: #E1306C;
   --chart-2: #00B900;
   --chart-3: #4285F4;
   --chart-4: #EA4335;
-  --chart-5: #6366F1;
-  /* Sidebar */
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #111827;
-  --sidebar-primary: #6366f1;
+  --chart-5: #CC5500;
+  /* Sidebar — 暖色系 */
+  --sidebar: #EDE8E3;
+  --sidebar-foreground: #4A3F35;
+  --sidebar-primary: #E87428;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #F3F4F6;
-  --sidebar-accent-foreground: #111827;
-  --sidebar-border: #E5E7EB;
-  --sidebar-ring: #6366f1;
+  --sidebar-accent: #FFDFC4;
+  --sidebar-accent-foreground: #CC5500;
+  --sidebar-border: #D0C7BC;
+  --sidebar-ring: #E87428;
 }
 
 .dark {
-  /* Base - ダークブルーグレーの背景にソフトホワイトのテキスト */
-  --background: #0F172A;
-  --foreground: #E2E8F0;
-  /* Card / Surface - 背景より少し明るいカード */
-  --card: #1E293B;
-  --card-foreground: #E2E8F0;
-  --popover: #1E293B;
-  --popover-foreground: #E2E8F0;
-  /* Primary - 彩度を少し落として目に優しく */
-  --primary: #818CF8;
-  --primary-foreground: #0F172A;
+  /* Base — ダークブラウン系 */
+  --background: #1A1510;
+  --foreground: #F0EBE5;
+  /* Card / Surface */
+  --card: #2A2420;
+  --card-foreground: #F0EBE5;
+  --popover: #2A2420;
+  --popover-foreground: #F0EBE5;
+  /* Primary — 暖色オレンジ */
+  --primary: #E87428;
+  --primary-foreground: #1A1510;
   /* Secondary */
-  --secondary: #1E293B;
-  --secondary-foreground: #CBD5E1;
+  --secondary: #2A2420;
+  --secondary-foreground: #D9CFC5;
   /* Muted */
-  --muted: #1E293B;
-  --muted-foreground: #A1AFCA;
+  --muted: #2A2420;
+  --muted-foreground: #8C7E72;
   /* Accent */
-  --accent: #1E293B;
-  --accent-foreground: #E2E8F0;
+  --accent: #2A2420;
+  --accent-foreground: #F0EBE5;
   /* Destructive */
   --destructive: #F87171;
-  /* Border / Input - 控えめなボーダー */
-  --border: #334155;
-  --input: #334155;
-  --ring: #818CF8;
-  /* Chart - ダークモード用に彩度を調整 */
+  /* Border / Input */
+  --border: #4A3F35;
+  --input: #4A3F35;
+  --ring: #E87428;
+  /* Chart — プラットフォーム色はダークモード調整 */
   --chart-1: #F472B6;
   --chart-2: #34D399;
   --chart-3: #60A5FA;
   --chart-4: #F87171;
-  --chart-5: #A78BFA;
-  /* Sidebar */
-  --sidebar: #0F172A;
-  --sidebar-foreground: #E2E8F0;
-  --sidebar-primary: #818CF8;
-  --sidebar-primary-foreground: #0F172A;
-  --sidebar-accent: #1E293B;
-  --sidebar-accent-foreground: #E2E8F0;
-  --sidebar-border: #334155;
-  --sidebar-ring: #818CF8;
+  --chart-5: #E87428;
+  /* Sidebar — ダークブラウン */
+  --sidebar: #1A1510;
+  --sidebar-foreground: #F0EBE5;
+  --sidebar-primary: #E87428;
+  --sidebar-primary-foreground: #1A1510;
+  --sidebar-accent: #2A2420;
+  --sidebar-accent-foreground: #F0EBE5;
+  --sidebar-border: #4A3F35;
+  --sidebar-ring: #E87428;
   /* Platform colors - ダークモードオーバーライド */
   --color-instagram: #F472B6;
   --color-instagram-light: rgba(244, 114, 182, 0.15);
@@ -100,8 +100,8 @@
   --color-ga4-light: rgba(96, 165, 250, 0.15);
   --color-gbp: #F87171;
   --color-gbp-light: rgba(248, 113, 113, 0.15);
-  --color-summary: #A78BFA;
-  --color-summary-light: rgba(167, 139, 250, 0.15);
+  --color-summary: #E87428;
+  --color-summary-light: rgba(232, 116, 40, 0.15);
   /* Semantic colors - ダークモードオーバーライド */
   --color-success: #34D399;
   --color-success-bg: rgba(52, 211, 153, 0.15);
@@ -164,8 +164,8 @@
   --color-ga4-light: #EBF2FF;
   --color-gbp: #EA4335;
   --color-gbp-light: #FDECE9;
-  --color-summary: #6366F1;
-  --color-summary-light: #EEF2FF;
+  --color-summary: #CC5500;
+  --color-summary-light: #FFF0E5;
   /* Semantic colors - Light mode */
   --color-success: #10B981;
   --color-success-bg: #ECFDF5;
@@ -184,8 +184,8 @@
   --color-ga4-light-dark: rgba(96, 165, 250, 0.15);
   --color-gbp-dark: #F87171;
   --color-gbp-light-dark: rgba(248, 113, 113, 0.15);
-  --color-summary-dark: #A78BFA;
-  --color-summary-light-dark: rgba(167, 139, 250, 0.15);
+  --color-summary-dark: #E87428;
+  --color-summary-light-dark: rgba(232, 116, 40, 0.15);
   /* Semantic colors - Dark mode */
   --color-success-dark: #34D399;
   --color-success-bg-dark: rgba(52, 211, 153, 0.15);

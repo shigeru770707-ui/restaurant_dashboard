@@ -1,6 +1,6 @@
 /**
- * Hook to fetch dashboard data from the API with mock data fallback.
- * Replaces direct `getMockDataForMonth()` calls in page components.
+ * Hook to fetch dashboard data from the API.
+ * All platforms use real API data only (no mock fallback).
  */
 
 import { useState, useEffect, useRef } from 'react'
@@ -19,9 +19,43 @@ import {
   aggregateMonthly,
   type Store,
 } from '@/utils/api'
-import { getMockDataForMonth } from '@/utils/mockData'
+import type { InstagramInsight, InstagramPost } from '@/types/instagram'
+import type { GA4Metric, GA4TrafficSource, GA4Page } from '@/types/ga4'
+import type { GBPMetric } from '@/types/gbp'
+import type { LineFollowerInsight, LineMessageInsight } from '@/types/line'
 
-type DashboardData = ReturnType<typeof getMockDataForMonth>
+interface DashboardData {
+  instagram: {
+    current: InstagramInsight
+    previous: InstagramInsight
+    trend: InstagramInsight[]
+    posts: InstagramPost[]
+  }
+  line: {
+    current: LineFollowerInsight
+    previous: LineFollowerInsight
+    trend: LineFollowerInsight[]
+    messages: LineMessageInsight[]
+    demographic: { genders: { label: string; percentage: number }[]; ages: { label: string; percentage: number }[]; areas: { label: string; percentage: number }[] }
+  }
+  ga4: {
+    current: GA4Metric
+    previous: GA4Metric
+    trend: GA4Metric[]
+    trafficSources: GA4TrafficSource[]
+    pages: GA4Page[]
+    demographic: { genders: { label: string; percentage: number }[]; ages: { label: string; percentage: number }[]; areas: { label: string; percentage: number }[] }
+    hourlySessions: { hour: number; sessions: number }[]
+  }
+  gbp: {
+    current: GBPMetric
+    previous: GBPMetric
+    trend: GBPMetric[]
+    reviews: { author: string; rating: number; text: string; date: string; hasReply: boolean }[]
+    ratingDistribution: { rating: number; count: number }[]
+    hourlyActions: { hour: number; actions: number }[]
+  }
+}
 
 interface UseDashboardDataResult {
   data: DashboardData
@@ -30,19 +64,17 @@ interface UseDashboardDataResult {
   stores: Store[]
 }
 
-/** Build initial data with empty LINE defaults (no mock for LINE). */
-function getInitialData(month: string, storeIndex: number): DashboardData {
-  const mock = getMockDataForMonth(month, storeIndex)
-  const emptyInsight = { date: month, followers: 0, targeted_reaches: 0, blocks: 0 }
+/** Build initial empty data (no mock fallback for any platform). */
+function getInitialData(month: string, _storeIndex: number): DashboardData {
+  const emptyLine = { date: month, followers: 0, targeted_reaches: 0, blocks: 0 }
+  const emptyIg = { date: month, followers_count: 0, reach: 0, impressions: 0, profile_views: 0, website_clicks: 0 }
+  const emptyGa4 = { date: month, sessions: 0, active_users: 0, new_users: 0, page_views: 0, bounce_rate: 0, avg_session_duration: 0, conversions: 0 }
+  const emptyGbp = { date: month, queries_direct: 0, queries_indirect: 0, views_maps: 0, views_search: 0, actions_website: 0, actions_phone: 0, actions_directions: 0 }
   return {
-    ...mock,
-    line: {
-      current: emptyInsight,
-      previous: emptyInsight,
-      trend: [],
-      messages: [],
-      demographic: mock.line.demographic,
-    },
+    instagram: { current: emptyIg, previous: emptyIg, trend: [], posts: [] },
+    line: { current: emptyLine, previous: emptyLine, trend: [], messages: [], demographic: { genders: [], ages: [], areas: [] } },
+    ga4: { current: emptyGa4, previous: emptyGa4, trend: [], trafficSources: [], pages: [], demographic: { genders: [], ages: [], areas: [] }, hourlySessions: [] },
+    gbp: { current: emptyGbp, previous: emptyGbp, trend: [], reviews: [], ratingDistribution: [], hourlyActions: [] },
   }
 }
 
@@ -105,7 +137,7 @@ export function useDashboardData(
           gbpMetricsRaw,
         ] = await Promise.all([
           fetchInstagramMetrics(storeId, start6, end),
-          fetchInstagramPosts(storeId, 50),
+          fetchInstagramPosts(storeId, 100), // 投稿取得上限。月間投稿数が多い場合は増やす
           fetchLineMetrics(storeId, start6, end),
           fetchLineMessages(storeId, currentStart, currentEnd),
           fetchLineDemographics(storeId),
@@ -120,8 +152,10 @@ export function useDashboardData(
         // Aggregate daily data into monthly for trend display
         // Note: snapshot/cumulative fields (followers, blocks, followers_count) must use
         // the last value of the month, not a sum. Pass them as lastFields.
+        // NOTE: reach は日次リーチのSUM。月間ユニークリーチとは異なる（過大評価の可能性）。
+        // Instagram APIで月間ユニークリーチを別途取得する必要があるため現状維持。
         const igMonthly = aggregateMonthly(igMetricsRaw, 'date', [], ['followers_count'])
-        const lineMonthly = aggregateMonthly(lineMetricsRaw, 'date', [], ['followers', 'blocks'])
+        const lineMonthly = aggregateMonthly(lineMetricsRaw, 'date', [], ['followers', 'blocks', 'targeted_reaches'])
         const ga4Monthly = aggregateMonthly(ga4MetricsRaw, 'date', ['bounce_rate', 'avg_session_duration'])
         const gbpMonthly = aggregateMonthly(gbpMetricsRaw, 'date', [])
 
@@ -148,18 +182,18 @@ export function useDashboardData(
           return
         }
 
-        // Use mock data as defaults only for fields the API doesn't provide
-        const mockData = getMockDataForMonth(selectedMonth, storeIndex)
-
-        // Empty defaults for LINE (no mock fallback)
+        // Empty defaults (no mock fallback)
         const emptyLineInsight = { date: selectedMonth, followers: 0, targeted_reaches: 0, blocks: 0 }
+        const emptyIgInsight = { date: selectedMonth, followers_count: 0, reach: 0, impressions: 0, profile_views: 0, website_clicks: 0 }
+        const emptyGa4Metric = { date: selectedMonth, sessions: 0, active_users: 0, new_users: 0, page_views: 0, bounce_rate: 0, avg_session_duration: 0, conversions: 0 }
+        const emptyGbpMetric = { date: selectedMonth, queries_direct: 0, queries_indirect: 0, views_maps: 0, views_search: 0, actions_website: 0, actions_phone: 0, actions_directions: 0 }
 
         const result: DashboardData = {
           instagram: {
-            current: igCurrent ?? mockData.instagram.current,
-            previous: igPrevious ?? mockData.instagram.previous,
-            trend: igMonthly.length > 0 ? igMonthly : mockData.instagram.trend,
-            posts: igPosts.length > 0 ? igPosts : mockData.instagram.posts,
+            current: igCurrent ?? emptyIgInsight,
+            previous: igPrevious ?? emptyIgInsight,
+            trend: igMonthly,
+            posts: igPosts,
           },
           line: {
             current: lineCurrent ?? emptyLineInsight,
@@ -189,21 +223,21 @@ export function useDashboardData(
             } : { genders: [], ages: [], areas: [] },
           },
           ga4: {
-            current: ga4Current ?? mockData.ga4.current,
-            previous: ga4Previous ?? mockData.ga4.previous,
-            trend: ga4Monthly.length > 0 ? ga4Monthly : mockData.ga4.trend,
-            trafficSources: ga4Sources.length > 0 ? ga4Sources : mockData.ga4.trafficSources,
-            pages: ga4Pages.length > 0 ? ga4Pages : mockData.ga4.pages,
-            demographic: mockData.ga4.demographic, // API doesn't provide demographics
-            hourlySessions: mockData.ga4.hourlySessions, // API doesn't provide hourly data
+            current: ga4Current ?? emptyGa4Metric,
+            previous: ga4Previous ?? emptyGa4Metric,
+            trend: ga4Monthly,
+            trafficSources: ga4Sources,
+            pages: ga4Pages,
+            demographic: { genders: [], ages: [], areas: [] },
+            hourlySessions: [],
           },
           gbp: {
-            current: gbpCurrent ?? mockData.gbp.current,
-            previous: gbpPrevious ?? mockData.gbp.previous,
-            trend: gbpMonthly.length > 0 ? gbpMonthly : mockData.gbp.trend,
-            reviews: mockData.gbp.reviews, // API doesn't provide reviews yet
-            ratingDistribution: mockData.gbp.ratingDistribution,
-            hourlyActions: mockData.gbp.hourlyActions,
+            current: gbpCurrent ?? emptyGbpMetric,
+            previous: gbpPrevious ?? emptyGbpMetric,
+            trend: gbpMonthly,
+            reviews: [],
+            ratingDistribution: [],
+            hourlyActions: [],
           },
         }
 

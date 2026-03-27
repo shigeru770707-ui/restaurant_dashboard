@@ -3,7 +3,6 @@ import {
   XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
 import { useDashboardData } from '@/hooks/useDashboardData'
-import { getMockDataForMonth } from '@/utils/mockData'
 import { formatNumber, formatPercent } from '@/utils/format'
 import type { ReportProps } from './ReportSummary'
 
@@ -32,7 +31,8 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
 
   const avgRating = reviews.length > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0
   const totalRatings = ratingDistribution.reduce((s, r) => s + r.count, 0)
-  const replyRate = 68
+  // Reply rate: not available from current API - show as unavailable
+  const replyRate: number | null = null
 
   const ratingChartData = ratingDistribution.slice().sort((a, b) => b.rating - a.rating).map((r) => ({
     name: `${r.rating}★`, count: r.count, rating: r.rating,
@@ -55,14 +55,8 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
   // Recent reviews
   const topReviews = reviews.slice(0, isPdf ? 2 : 3)
 
-  // Store comparison
-  const storeComparison = storeNames.map((name, i) => {
-    const sd = getMockDataForMonth(selectedMonth, i)
-    const sActions = sd.gbp.current.actions_website + sd.gbp.current.actions_phone + sd.gbp.current.actions_directions
-    const sAvg = sd.gbp.reviews.length > 0 ? sd.gbp.reviews.reduce((s, r) => s + r.rating, 0) / sd.gbp.reviews.length : 0
-    const sViews = sd.gbp.current.views_maps + sd.gbp.current.views_search
-    return { name, views: sViews, actions: sActions, rating: sAvg }
-  })
+  // Store comparison requires all-store data which is not available from single-store props
+  const storeComparison: { name: string; views: number; actions: number; rating: number }[] = []
 
   const diff = (curr: number, prev: number) => {
     if (!prev) return ''
@@ -94,7 +88,7 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
           { label: 'アクション合計', value: formatNumber(totalActions), change: diff(totalActions, prevTotalActions), changeColor: diffColor(totalActions, prevTotalActions) },
           { label: 'CVR', value: formatPercent(convRate), change: diff(convRate, prevConvRate), changeColor: diffColor(convRate, prevConvRate) },
           { label: '平均評価', value: `${avgRating.toFixed(1)} ★`, change: avgRating >= 4.6 ? '良好' : '要改善', changeColor: avgRating >= 4.6 ? '#34A853' : '#F9AB00' },
-          { label: '口コミ返信率', value: `${replyRate}%`, change: replyRate >= 73 ? '良好' : `目標73%`, changeColor: replyRate >= 73 ? '#34A853' : '#F9AB00' },
+          { label: '口コミ返信率', value: replyRate != null ? `${replyRate}%` : '-', change: replyRate != null ? (replyRate >= 73 ? '良好' : `目標73%`) : 'データなし', changeColor: replyRate != null && replyRate >= 73 ? '#34A853' : '#F9AB00' },
           { label: '口コミ件数', value: `${totalRatings}件`, change: '', changeColor: '#666' },
         ].map((kpi, i) => (
           <div key={i} className={`rounded-lg border border-gray-200 text-center ${isPdf ? "p-1.5" : "p-2"}`} style={{ borderTop: `3px solid ${GBP_RED}` }}>
@@ -241,26 +235,30 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
           {/* Store Comparison */}
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
             <h3 className={`font-bold text-gray-700 ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`}>店舗間比較</h3>
-            <table className={`w-full ${isPdf ? "text-[8px]" : "text-[9px]"}`}>
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className={`text-left font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>店舗</th>
-                  <th className={`text-right font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>表示</th>
-                  <th className={`text-right font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>アクション</th>
-                  <th className={`text-right font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>評価</th>
-                </tr>
-              </thead>
-              <tbody>
-                {storeComparison.map((s, i) => (
-                  <tr key={i} className="border-b border-gray-100" style={{ background: i === storeIndex ? '#FEF2F2' : undefined }}>
-                    <td className={`font-medium text-gray-800 ${isPdf ? "py-0.5" : "py-1"}`}>{s.name}</td>
-                    <td className={`text-right text-gray-600 ${isPdf ? "py-0.5" : "py-1"}`}>{formatNumber(s.views)}</td>
-                    <td className={`text-right text-gray-600 ${isPdf ? "py-0.5" : "py-1"}`}>{formatNumber(s.actions)}</td>
-                    <td className={`text-right text-gray-600 ${isPdf ? "py-0.5" : "py-1"}`}>{s.rating.toFixed(1)}★</td>
+            {storeComparison.length > 0 ? (
+              <table className={`w-full ${isPdf ? "text-[8px]" : "text-[9px]"}`}>
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className={`text-left font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>店舗</th>
+                    <th className={`text-right font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>表示</th>
+                    <th className={`text-right font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>アクション</th>
+                    <th className={`text-right font-medium text-gray-500 ${isPdf ? "py-0.5" : "py-1"}`}>評価</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {storeComparison.map((s, i) => (
+                    <tr key={i} className="border-b border-gray-100" style={{ background: i === storeIndex ? '#FEF2F2' : undefined }}>
+                      <td className={`font-medium text-gray-800 ${isPdf ? "py-0.5" : "py-1"}`}>{s.name}</td>
+                      <td className={`text-right text-gray-600 ${isPdf ? "py-0.5" : "py-1"}`}>{formatNumber(s.views)}</td>
+                      <td className={`text-right text-gray-600 ${isPdf ? "py-0.5" : "py-1"}`}>{formatNumber(s.actions)}</td>
+                      <td className={`text-right text-gray-600 ${isPdf ? "py-0.5" : "py-1"}`}>{s.rating.toFixed(1)}★</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className={`text-gray-400 text-center ${isPdf ? "text-[8px] py-1" : "text-[9px] py-2"}`}>店舗間比較データは現在利用できません</p>
+            )}
           </div>
 
           {/* Action Items */}
@@ -268,7 +266,7 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
             <h3 className={`font-bold ${isPdf ? "text-[10px] mb-0.5" : "text-xs mb-2"}`} style={{ color: GBP_RED }}>インサイト & アクション</h3>
             <ul className={`text-gray-700 list-disc list-inside ${isPdf ? "space-y-0.5 text-[9px]" : "space-y-1 text-[10px]"}`}>
               <li>平均評価 {avgRating.toFixed(1)} {avgRating >= 4.6 ? '→ 業界平均4.6以上' : '→ 口コミ返信強化で改善を目指す'}</li>
-              <li>返信率 {replyRate}% {replyRate >= 73 ? '→ 良好' : '→ 目標73%まで返信率を向上'}</li>
+              <li>返信率 {replyRate != null ? `${replyRate}%` : '-'} {replyRate != null ? (replyRate >= 73 ? '→ 良好' : '→ 目標73%まで返信率を向上') : '→ データ取得後に評価'}</li>
               <li>主要アクション: {current.actions_website >= current.actions_phone && current.actions_website >= current.actions_directions ? 'ウェブサイト閲覧' : current.actions_phone >= current.actions_directions ? '電話発信' : '経路検索'}</li>
             </ul>
           </div>
@@ -279,16 +277,16 @@ export default function ReportGBP({ selectedMonth, storeIndex, storeName, genera
             <h3 className="text-[10px] font-bold text-gray-700 mb-1">口コミ対応状況</h3>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[9px] text-gray-500">返信率</span>
-              <span className="text-[11px] font-bold" style={{ color: replyRate >= 73 ? '#34A853' : '#F9AB00' }}>{replyRate}%</span>
+              <span className="text-[11px] font-bold" style={{ color: replyRate != null && replyRate >= 73 ? '#34A853' : '#F9AB00' }}>{replyRate != null ? `${replyRate}%` : '-'}</span>
               <span className="text-[7px] px-1 py-0.5 rounded-full font-medium" style={{
-                background: replyRate >= 73 ? 'rgba(52,168,83,0.1)' : 'rgba(249,171,0,0.1)',
-                color: replyRate >= 73 ? '#34A853' : '#F9AB00',
+                background: replyRate != null && replyRate >= 73 ? 'rgba(52,168,83,0.1)' : 'rgba(249,171,0,0.1)',
+                color: replyRate != null && replyRate >= 73 ? '#34A853' : '#F9AB00',
               }}>
-                {replyRate >= 73 ? '良好' : '目標73%'}
+                {replyRate != null ? (replyRate >= 73 ? '良好' : '目標73%') : 'データなし'}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2 mb-0.5 relative">
-              <div className="h-2 rounded-full" style={{ width: `${Math.min(replyRate, 100)}%`, background: replyRate >= 73 ? '#34A853' : '#F9AB00' }} />
+              <div className="h-2 rounded-full" style={{ width: `${replyRate != null ? Math.min(replyRate, 100) : 0}%`, background: replyRate != null && replyRate >= 73 ? '#34A853' : '#F9AB00' }} />
               <div className="absolute top-0 h-2 w-px bg-red-500" style={{ left: '73%' }} />
             </div>
             <div className="flex justify-between text-[7px] text-gray-400 mb-1.5">

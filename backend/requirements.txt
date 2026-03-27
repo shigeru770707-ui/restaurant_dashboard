@@ -1,5 +1,6 @@
 fastapi
 uvicorn[standard]
+pyjwt
 pandas
 cryptography
 google-analytics-data

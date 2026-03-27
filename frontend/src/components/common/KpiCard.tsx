@@ -8,6 +8,8 @@ interface KpiCardProps {
   previousValue?: number
   color?: string
   isLoading?: boolean
+  /** Optional subtitle text shown below the trend badge area */
+  subtitle?: string
 }
 
 export default function KpiCard({
@@ -15,8 +17,9 @@ export default function KpiCard({
   value,
   unit,
   previousValue,
-  color = '#6366f1',
+  color = '#CC5500',
   isLoading = false,
+  subtitle,
 }: KpiCardProps) {
   const numericValue = typeof value === 'number' ? value : parseFloat(value) || 0
 
@@ -67,7 +70,7 @@ export default function KpiCard({
       </p>
 
       {/* Main value */}
-      <p className="text-xl sm:text-2xl md:text-[28px] font-extrabold text-foreground leading-tight tracking-tight">
+      <p className="text-xl sm:text-2xl md:text-[28px] font-bold text-foreground leading-tight tracking-tight">
         {formattedValue}
         {unit && unit !== '%' && (
           <span className="ml-1.5 text-base font-medium text-muted-foreground">{unit}</span>
@@ -80,6 +83,11 @@ export default function KpiCard({
           <TrendBadge currentValue={numericValue} previousValue={previousValue} />
           <span className="hidden sm:inline text-xs text-muted-foreground">vs 前月</span>
         </div>
+      )}
+
+      {/* Subtitle */}
+      {subtitle && (
+        <p className="mt-1 sm:mt-2 text-[10px] sm:text-xs text-muted-foreground">{subtitle}</p>
       )}
     </div>
   )

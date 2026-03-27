@@ -28,7 +28,7 @@ function monthSeed(month: string): number {
 
 const months6 = generateDates(6)
 
-export const mockInstagramInsights: InstagramInsight[] = months6.map((date, i) => ({
+const mockInstagramInsights: InstagramInsight[] = months6.map((date, i) => ({
   date,
   followers_count: 12500 + i * 320 + Math.floor(Math.random() * 100),
   reach: 45000 + i * 3000 + Math.floor(Math.random() * 5000),
@@ -80,11 +80,11 @@ function generatePostsForMonth(month: string): InstagramPost[] {
   }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 }
 
-export const mockInstagramPosts: InstagramPost[] = generatePostsForMonth(
+const mockInstagramPosts: InstagramPost[] = generatePostsForMonth(
   months6[months6.length - 1],
 )
 
-export const mockGA4Metrics: GA4Metric[] = months6.map((date, i) => ({
+const mockGA4Metrics: GA4Metric[] = months6.map((date, i) => ({
   date,
   sessions: 15000 + i * 1200 + Math.floor(Math.random() * 2000),
   active_users: 8500 + i * 600 + Math.floor(Math.random() * 800),
@@ -95,7 +95,7 @@ export const mockGA4Metrics: GA4Metric[] = months6.map((date, i) => ({
   conversions: 320 + i * 25 + Math.floor(Math.random() * 40),
 }))
 
-export const mockGA4TrafficSources: GA4TrafficSource[] = [
+const mockGA4TrafficSources: GA4TrafficSource[] = [
   { channel: 'Organic Search', sessions: 6200, users: 4800 },
   { channel: 'Organic Social', sessions: 4100, users: 3200 },
   { channel: 'Direct', sessions: 3500, users: 2800 },
@@ -103,7 +103,7 @@ export const mockGA4TrafficSources: GA4TrafficSource[] = [
   { channel: 'Paid Search', sessions: 1200, users: 950 },
 ]
 
-export const mockGA4Pages: GA4Page[] = [
+const mockGA4Pages: GA4Page[] = [
   { page_path: '/', page_title: 'トップページ', page_views: 18500, avg_time_on_page: 45.2 },
   { page_path: '/menu', page_title: 'メニュー', page_views: 12300, avg_time_on_page: 92.5 },
   { page_path: '/reservation', page_title: '予約', page_views: 8900, avg_time_on_page: 68.3 },
@@ -111,7 +111,7 @@ export const mockGA4Pages: GA4Page[] = [
   { page_path: '/about', page_title: '店舗紹介', page_views: 4200, avg_time_on_page: 78.1 },
 ]
 
-export const mockGBPMetrics: GBPMetric[] = months6.map((date, i) => ({
+const mockGBPMetrics: GBPMetric[] = months6.map((date, i) => ({
   date,
   queries_direct: 3200 + i * 250 + Math.floor(Math.random() * 300),
   queries_indirect: 8500 + i * 400 + Math.floor(Math.random() * 600),
@@ -122,15 +122,15 @@ export const mockGBPMetrics: GBPMetric[] = months6.map((date, i) => ({
   actions_directions: 650 + i * 30 + Math.floor(Math.random() * 50),
 }))
 
-export const mockGBPReviews: GBPReview[] = [
-  { date: '2026-02-28', rating: 5, text: '料理もサービスも最高でした！特にパスタが絶品。', author: '山田太郎' },
-  { date: '2026-02-25', rating: 4, text: '雰囲気が良く、デートにぴったりです。', author: '佐藤花子' },
-  { date: '2026-02-20', rating: 5, text: '予約して行きましたが、スタッフの対応が素晴らしかった。', author: '鈴木一郎' },
-  { date: '2026-02-15', rating: 3, text: '料理は美味しかったですが、少し待ち時間が長かったです。', author: '田中美咲' },
-  { date: '2026-02-10', rating: 5, text: 'ランチメニューがコスパ最高！また来ます。', author: '高橋健' },
+const mockGBPReviews: GBPReview[] = [
+  { date: '2026-02-28', rating: 5, text: '料理もサービスも最高でした！特にパスタが絶品。', author: '山田太郎', hasReply: true },
+  { date: '2026-02-25', rating: 4, text: '雰囲気が良く、デートにぴったりです。', author: '佐藤花子', hasReply: true },
+  { date: '2026-02-20', rating: 5, text: '予約して行きましたが、スタッフの対応が素晴らしかった。', author: '鈴木一郎', hasReply: true },
+  { date: '2026-02-15', rating: 3, text: '料理は美味しかったですが、少し待ち時間が長かったです。', author: '田中美咲', hasReply: false },
+  { date: '2026-02-10', rating: 5, text: 'ランチメニューがコスパ最高！また来ます。', author: '高橋健', hasReply: true },
 ]
 
-export const mockGA4Demographic: GA4Demographic = {
+const mockGA4Demographic: GA4Demographic = {
   devices: [
     { label: 'モバイル', percentage: 62.5 },
     { label: 'デスクトップ', percentage: 28.3 },
@@ -174,7 +174,7 @@ function generateGA4HourlySessions(month: string): GA4HourlySession[] {
   return data
 }
 
-export const mockGBPRatingDistribution: GBPRatingDistribution[] = [
+const mockGBPRatingDistribution: GBPRatingDistribution[] = [
   { rating: 5, count: 42 },
   { rating: 4, count: 28 },
   { rating: 3, count: 12 },
@@ -239,24 +239,24 @@ function generateStoreGBPMetrics(storeIndex: number): GBPMetric[] {
 
 const STORE_REVIEWS: GBPReview[][] = [
   [
-    { date: '2026-02-28', rating: 5, text: '料理もサービスも最高でした！特にパスタが絶品。', author: '山田太郎' },
-    { date: '2026-02-25', rating: 4, text: '雰囲気が良く、デートにぴったりです。', author: '佐藤花子' },
-    { date: '2026-02-20', rating: 5, text: '予約して行きましたが、スタッフの対応が素晴らしかった。', author: '鈴木一郎' },
-    { date: '2026-02-15', rating: 3, text: '料理は美味しかったですが、少し待ち時間が長かったです。', author: '田中美咲' },
-    { date: '2026-02-10', rating: 5, text: 'ランチメニューがコスパ最高！また来ます。', author: '高橋健' },
+    { date: '2026-02-28', rating: 5, text: '料理もサービスも最高でした！特にパスタが絶品。', author: '山田太郎', hasReply: true },
+    { date: '2026-02-25', rating: 4, text: '雰囲気が良く、デートにぴったりです。', author: '佐藤花子', hasReply: true },
+    { date: '2026-02-20', rating: 5, text: '予約して行きましたが、スタッフの対応が素晴らしかった。', author: '鈴木一郎', hasReply: true },
+    { date: '2026-02-15', rating: 3, text: '料理は美味しかったですが、少し待ち時間が長かったです。', author: '田中美咲', hasReply: false },
+    { date: '2026-02-10', rating: 5, text: 'ランチメニューがコスパ最高！また来ます。', author: '高橋健', hasReply: true },
   ],
   [
-    { date: '2026-02-27', rating: 5, text: '表参道の隠れ家的なお店。雰囲気抜群です！', author: '中村優子' },
-    { date: '2026-02-22', rating: 4, text: 'おしゃれな内装でインスタ映えします。料理も美味。', author: '小林真' },
-    { date: '2026-02-18', rating: 4, text: 'ワインの品揃えが豊富で大満足。', author: '渡辺さくら' },
-    { date: '2026-02-12', rating: 5, text: '記念日ディナーで利用。特別感がありました。', author: '伊藤大輔' },
+    { date: '2026-02-27', rating: 5, text: '表参道の隠れ家的なお店。雰囲気抜群です！', author: '中村優子', hasReply: true },
+    { date: '2026-02-22', rating: 4, text: 'おしゃれな内装でインスタ映えします。料理も美味。', author: '小林真', hasReply: true },
+    { date: '2026-02-18', rating: 4, text: 'ワインの品揃えが豊富で大満足。', author: '渡辺さくら', hasReply: false },
+    { date: '2026-02-12', rating: 5, text: '記念日ディナーで利用。特別感がありました。', author: '伊藤大輔', hasReply: true },
   ],
   [
-    { date: '2026-02-26', rating: 4, text: '新宿で気軽に入れる良いお店。ランチがお得！', author: '加藤翔太' },
-    { date: '2026-02-21', rating: 3, text: '味は良いですが、席が少し狭いかな。', author: '松本由美' },
-    { date: '2026-02-14', rating: 5, text: 'スタッフが親切で居心地が良い。また行きます。', author: '木村拓也' },
-    { date: '2026-02-08', rating: 4, text: '駅近で便利。仕事帰りに重宝しています。', author: '吉田恵' },
-    { date: '2026-02-03', rating: 2, text: '混雑時は注文から提供まで時間がかかりました。', author: '斎藤圭' },
+    { date: '2026-02-26', rating: 4, text: '新宿で気軽に入れる良いお店。ランチがお得！', author: '加藤翔太', hasReply: true },
+    { date: '2026-02-21', rating: 3, text: '味は良いですが、席が少し狭いかな。', author: '松本由美', hasReply: false },
+    { date: '2026-02-14', rating: 5, text: 'スタッフが親切で居心地が良い。また行きます。', author: '木村拓也', hasReply: true },
+    { date: '2026-02-08', rating: 4, text: '駅近で便利。仕事帰りに重宝しています。', author: '吉田恵', hasReply: true },
+    { date: '2026-02-03', rating: 2, text: '混雑時は注文から提供まで時間がかかりました。', author: '斎藤圭', hasReply: false },
   ],
 ]
 
@@ -266,7 +266,7 @@ const STORE_RATING_DISTRIBUTIONS: GBPRatingDistribution[][] = [
   [{ rating: 5, count: 18 }, { rating: 4, count: 20 }, { rating: 3, count: 14 }, { rating: 2, count: 6 }, { rating: 1, count: 4 }],
 ]
 
-export function getMockDataForMonth(month: string, storeIndex = 0) {
+function getMockDataForMonth(month: string, storeIndex = 0) {
   const igInsights = generateStoreInstagramInsights(storeIndex)
   const gbpMetrics = generateStoreGBPMetrics(storeIndex)
 

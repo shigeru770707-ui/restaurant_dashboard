@@ -9,7 +9,7 @@ export function formatPercent(value: number, decimals = 1): string {
   return `${clean}%`
 }
 
-export function formatCompact(value: number): string {
+function formatCompact(value: number): string {
   if (value >= 10000) {
     return `${(value / 10000).toFixed(1)}万`
   }

@@ -14,9 +14,10 @@ export interface GBPReview {
   rating: number
   text: string
   author: string
+  hasReply: boolean
 }
 
-export interface GBPSummary {
+interface GBPSummary {
   search_views: number
   actions: number
   average_rating: number

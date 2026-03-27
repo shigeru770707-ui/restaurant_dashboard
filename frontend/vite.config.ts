@@ -15,10 +15,15 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         output: {
-          // Include content hash in filenames to bust browser cache
           entryFileNames: 'assets/[name]-[hash].js',
           chunkFileNames: 'assets/[name]-[hash].js',
           assetFileNames: 'assets/[name]-[hash].[ext]',
+          manualChunks: {
+            react: ['react', 'react-dom', 'react-router-dom'],
+            recharts: ['recharts'],
+            query: ['@tanstack/react-query'],
+            ui: ['class-variance-authority', 'clsx', 'tailwind-merge', 'radix-ui'],
+          },
         },
       },
     },

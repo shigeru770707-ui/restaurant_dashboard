@@ -1,13 +1,15 @@
+import { useState } from 'react'
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip, Legend,
-  ResponsiveContainer, CartesianGrid,
+  LineChart, Line, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, CartesianGrid, Legend,
 } from 'recharts'
-import { Link } from 'react-router-dom'
 import Header from '@/components/layout/Header'
-import KpiCard from '@/components/common/KpiCard'
+import TrendBadge from '@/components/common/TrendBadge'
 import { useMonth } from '@/hooks/useMonth'
-import { useDashboardData } from '@/hooks/useDashboardData'
+import { useMultiStoreData, STORE_COLORS, type StoreData } from '@/hooks/useMultiStoreData'
 import { formatNumber, formatPercent } from '@/utils/format'
+
+const CARD_SHADOW = '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)'
 
 const TOOLTIP_STYLE = {
   background: 'var(--card)',
@@ -17,145 +19,352 @@ const TOOLTIP_STYLE = {
   color: 'var(--foreground)',
   fontSize: '13px',
 }
-
 const GRID_COLOR = 'var(--border)'
 const TICK_COLOR = 'var(--muted-foreground)'
 
+// ─── Helpers ───
+
+function getHeatmapClass(value: number, values: number[], inverted = false): string {
+  const sorted = [...values].sort((a, b) => a - b)
+  const rank = sorted.indexOf(value)
+  if (inverted) {
+    if (rank <= 0) return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+    if (rank >= values.length - 1) return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+    return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+  }
+  if (rank >= values.length - 1) return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+  if (rank <= 0) return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+  return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+}
+
+function Sparkline({ data, color, width = 80, height = 28 }: { data: number[]; color: string; width?: number; height?: number }) {
+  if (data.length < 2) return null
+  const max = Math.max(...data)
+  const min = Math.min(...data)
+  const range = max - min || 1
+  const points = data.map((v, i) =>
+    `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * (height - 4) - 2}`
+  ).join(' ')
+  return (
+    <svg width={width} height={height} className="shrink-0">
+      <polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function getAlerts(stores: StoreData[]) {
+  const alerts: { icon: string; storeName: string; message: string; type: 'warning' | 'success' }[] = []
+  for (const s of stores) {
+    if (s.ga4.current.bounce_rate > 50) {
+      alerts.push({ icon: 'warning', storeName: s.store.name, message: `直帰率が${formatPercent(s.ga4.current.bounce_rate)}と高水準です`, type: 'warning' })
+    }
+    const followers = s.ig.current.followers_count
+    if (followers > 0 && s.ig.current.reach / followers > 3) {
+      alerts.push({ icon: 'trending_up', storeName: s.store.name, message: `リーチ/フォロワー比が${(s.ig.current.reach / followers).toFixed(1)}倍 — 高拡散`, type: 'success' })
+    }
+    if (s.ig.postCount < 5) {
+      alerts.push({ icon: 'edit_note', storeName: s.store.name, message: `今月の投稿数が${s.ig.postCount}件と少なめです`, type: 'warning' })
+    }
+  }
+  return alerts.slice(0, 4)
+}
+
+// ─── Main Component ───
+
 export default function Summary() {
   const { selectedMonth } = useMonth()
-  const { data } = useDashboardData(selectedMonth)
+  const { stores, line, loading } = useMultiStoreData(selectedMonth)
+  const [rankingTab, setRankingTab] = useState<'ig' | 'ga4'>('ig')
+  const [trendMetric, setTrendMetric] = useState<'reach' | 'sessions' | 'followers'>('reach')
 
-  const ig = data.instagram
-  const ln = data.line
-  const ga = data.ga4
-  const gb = data.gbp
+  if (loading) {
+    return (
+      <div className="animate-in fade-in duration-400">
+        <Header title="全体サマリー" icon="chart_data" color="#CC5500" lightBg="#FFF0E5" reportType="summary" />
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center gap-3">
+            <div className="size-8 border-2 border-muted-foreground/30 border-t-primary rounded-full animate-spin" />
+            <p className="text-sm text-muted-foreground">データを取得中...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-  const totalReach = ig.current.reach + gb.current.views_maps + gb.current.views_search
-  const prevTotalReach = ig.previous.reach + gb.previous.views_maps + gb.previous.views_search
+  if (stores.length === 0) {
+    return (
+      <div className="animate-in fade-in duration-400">
+        <Header title="全体サマリー" icon="chart_data" color="#CC5500" lightBg="#FFF0E5" reportType="summary" />
+        <div className="flex items-center justify-center h-64">
+          <p className="text-sm text-muted-foreground">店舗データがありません</p>
+        </div>
+      </div>
+    )
+  }
 
-  const igEngRate = ig.current.reach > 0 ? (ig.current.impressions / ig.current.reach) * 10 : 0
-  const prevIgEngRate = ig.previous.reach > 0 ? (ig.previous.impressions / ig.previous.reach) * 10 : 0
+  const alerts = getAlerts(stores)
 
-  const gbpAvgRating = gb.reviews.length > 0
-    ? gb.reviews.reduce((s, r) => s + r.rating, 0) / gb.reviews.length
-    : 0
-  const gbpTotalRatings = gb.ratingDistribution.reduce((s, r) => s + r.count, 0)
-  const gbpReplyRate = 68
+  // ── Heatmap data ──
+  const heatmapMetrics = [
+    { label: 'IGフォロワー', key: 'igFollowers' as const, inverted: false },
+    { label: 'IGリーチ', key: 'igReach' as const, inverted: false },
+    { label: 'IGエンゲ率', key: 'igEngRate' as const, inverted: false },
+    { label: 'IG投稿数', key: 'igPosts' as const, inverted: false },
+    { label: 'GA4セッション', key: 'ga4Sessions' as const, inverted: false },
+    { label: 'GA4直帰率', key: 'ga4Bounce' as const, inverted: true },
+  ] as const
 
-  const topPosts = ig.posts
-    .map((p) => {
-      const eng = p.like_count + p.comments_count + (p.saved ?? 0) + (p.shares ?? 0)
-      return { ...p, engRate: p.reach > 0 ? (eng / p.reach) * 100 : 0 }
+  type HeatmapKey = typeof heatmapMetrics[number]['key']
+  const storeValues: Record<HeatmapKey, number[]> = {
+    igFollowers: stores.map(s => s.ig.current.followers_count),
+    igReach: stores.map(s => s.ig.current.reach),
+    igEngRate: stores.map(s => s.ig.engRate),
+    igPosts: stores.map(s => s.ig.postCount),
+    ga4Sessions: stores.map(s => s.ga4.current.sessions),
+    ga4Bounce: stores.map(s => s.ga4.current.bounce_rate),
+  }
+  const getStoreValue = (s: StoreData, key: HeatmapKey): number => {
+    switch (key) {
+      case 'igFollowers': return s.ig.current.followers_count
+      case 'igReach': return s.ig.current.reach
+      case 'igEngRate': return s.ig.engRate
+      case 'igPosts': return s.ig.postCount
+      case 'ga4Sessions': return s.ga4.current.sessions
+      case 'ga4Bounce': return s.ga4.current.bounce_rate
+    }
+  }
+  const formatHeatmapValue = (value: number, key: HeatmapKey): string => {
+    if (key === 'igEngRate' || key === 'ga4Bounce') return formatPercent(value)
+    return formatNumber(value)
+  }
+
+  // ── Ranking data ──
+  const igRanked = [...stores].sort((a, b) => b.ig.current.reach - a.ig.current.reach)
+  const ga4Ranked = [...stores].sort((a, b) => b.ga4.current.sessions - a.ga4.current.sessions)
+  const rankedStores = rankingTab === 'ig' ? igRanked : ga4Ranked
+  const getRankValue = (s: StoreData) => rankingTab === 'ig' ? s.ig.current.reach : s.ga4.current.sessions
+  const maxRankValue = Math.max(...rankedStores.map(getRankValue), 1)
+
+  // ── Trend chart data ──
+  const allMonths = [...new Set(stores.flatMap(s => {
+    if (trendMetric === 'sessions') return s.ga4.trend.map(t => t.date)
+    return s.ig.trend.map(t => t.date)
+  }))].sort()
+
+  const trendData = allMonths.map(month => {
+    const point: Record<string, string | number> = { month: month.slice(5) }
+    stores.forEach(s => {
+      if (trendMetric === 'reach') {
+        const item = s.ig.trend.find(t => t.date === month)
+        point[s.store.name] = item?.reach ?? 0
+      } else if (trendMetric === 'sessions') {
+        const item = s.ga4.trend.find(t => t.date === month)
+        point[s.store.name] = item?.sessions ?? 0
+      } else {
+        const item = s.ig.trend.find(t => t.date === month)
+        point[s.store.name] = item?.followers_count ?? 0
+      }
     })
-    .sort((a, b) => b.engRate - a.engRate)
-    .slice(0, 3)
+    return point
+  })
 
-  const alerts = getAlerts(data)
-
-  const trendData = ig.trend.map((item, i) => ({
-    month: item.date.slice(5),
-    igReach: item.reach,
-    lineFollowers: ln.trend[i]?.followers ?? 0,
-    ga4Sessions: ga.trend[i]?.sessions ?? 0,
-    gbpViews: (gb.trend[i]?.views_maps ?? 0) + (gb.trend[i]?.views_search ?? 0),
-  }))
+  // ── LINE metrics ──
+  const lineFollowers = line.current.followers
+  const lineBlocks = line.current.blocks
+  // 近似値: blocks / (followers + blocks) で算出。友だち解除（ブロック以外）は含まない。
+  // LINE APIではブロック数のみ取得可能なため、この近似式が現実的な上限。
+  const lineBlockRate = (lineFollowers + lineBlocks) > 0 ? (lineBlocks / (lineFollowers + lineBlocks)) * 100 : 0
+  const totalDelivered = line.messages.reduce((s, m) => s + m.delivered, 0)
+  const totalImpressions = line.messages.reduce((s, m) => s + m.unique_impressions, 0)
+  const totalClicks = line.messages.reduce((s, m) => s + m.unique_clicks, 0)
+  const lineOpenRate = totalDelivered > 0 ? (totalImpressions / totalDelivered) * 100 : 0
+  const lineCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
 
   return (
     <div className="animate-in fade-in duration-400">
-      <Header title="全体サマリー" icon="chart_data" color="#6366F1" lightBg="#EEF2FF" reportType="summary" />
+      <Header title="全体サマリー" icon="chart_data" color="#CC5500" lightBg="#FFF0E5" reportType="summary" />
 
-      {/* KPI Cards */}
-      <section className="mb-6 md:mb-8">
+      {/* ❷ Heatmap Overview */}
+      <section className="mb-6">
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          主要指標
+          ヒートマップ概況
         </h3>
-        <div className="grid grid-cols-2 gap-1.5 sm:gap-1.5 lg:gap-2 lg:grid-cols-4">
-          <KpiCard
-            title="総リーチ"
-            value={totalReach}
-            previousValue={prevTotalReach}
-            color="#6366F1"
-          />
-          <KpiCard
-            title="総エンゲージメント率"
-            value={formatPercent(igEngRate)}
-            previousValue={prevIgEngRate}
-            color="#6366F1"
-          />
-          <KpiCard
-            title="Web CV数"
-            value={ga.current.conversions}
-            previousValue={ga.previous.conversions}
-            color="#6366F1"
-          />
-          <KpiCard
-            title="ブランド検索数"
-            value={gb.current.queries_direct}
-            previousValue={gb.previous.queries_direct}
-            color="#6366F1"
-          />
+        <div
+          className="rounded-xl border border-border bg-card overflow-x-auto"
+          style={{ boxShadow: CARD_SHADOW }}
+        >
+          <table className="w-full min-w-[600px] text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">店舗</th>
+                {heatmapMetrics.map(m => (
+                  <th key={m.key} className="text-center px-3 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">
+                    {m.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {stores.map((s) => (
+                <tr key={s.store.id} className="border-b border-border last:border-b-0">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <span className="size-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                      <span className="font-medium text-foreground">{s.store.name}</span>
+                    </div>
+                  </td>
+                  {heatmapMetrics.map(m => {
+                    const val = getStoreValue(s, m.key)
+                    return (
+                      <td key={m.key} className="px-3 py-3 text-center">
+                        <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-semibold tabular-nums ${getHeatmapClass(val, storeValues[m.key], m.inverted)}`}>
+                          {formatHeatmapValue(val, m.key)}
+                        </span>
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
-      {/* Media Score Cards */}
-      <section className="mb-6 md:mb-8">
+      {/* ❸ Store Cards */}
+      <section className="mb-6">
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          メディア別スコア
+          店舗別パフォーマンス
         </h3>
-        <div className="grid grid-cols-2 gap-1.5 sm:gap-1.5 lg:gap-2 lg:grid-cols-4">
-          <MediaScoreCard
-            title="Instagram"
-            icon="photo_camera"
-            color="#E1306C"
-            href="/instagram"
-            metrics={[
-              { label: 'フォロワー', value: formatNumber(ig.current.followers_count) },
-              { label: 'リーチ', value: formatNumber(ig.current.reach) },
-              { label: 'エンゲージメント率', value: formatPercent(igEngRate) },
-            ]}
-          />
-          <MediaScoreCard
-            title="LINE"
-            icon="chat"
-            color="#00B900"
-            href="/line"
-            metrics={[
-              { label: '友だち数', value: formatNumber(ln.current.followers) },
-              { label: '開封率', value: formatPercent(70.5) },
-              { label: 'ブロック率', value: formatPercent(ln.current.blocks / ln.current.followers * 100) },
-            ]}
-          />
-          <MediaScoreCard
-            title="GA4"
-            icon="monitoring"
-            color="#4285F4"
-            href="/ga4"
-            metrics={[
-              { label: 'セッション数', value: formatNumber(ga.current.sessions) },
-              { label: 'CV数', value: formatNumber(ga.current.conversions) },
-              { label: 'CVR', value: formatPercent(ga.current.conversions / ga.current.sessions * 100) },
-            ]}
-          />
-          <MediaScoreCard
-            title="GBP"
-            icon="location_on"
-            color="#EA4335"
-            href="/gbp"
-            metrics={[
-              { label: '検索表示', value: formatNumber(gb.current.views_search + gb.current.views_maps) },
-              { label: 'アクション数', value: formatNumber(gb.current.actions_website + gb.current.actions_phone + gb.current.actions_directions) },
-              { label: '平均評価', value: '4.5 ★' },
-            ]}
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+          {stores.map((s, idx) => (
+            <div
+              key={s.store.id}
+              className="rounded-xl border border-border bg-card p-4 md:p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
+              style={{
+                boxShadow: CARD_SHADOW,
+                borderTop: `3px solid ${s.color}`,
+                animation: `fadeInUp 0.4s ease-out ${idx * 0.08}s both`,
+              }}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <span className="size-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                <span className="font-semibold text-foreground">{s.store.name}</span>
+              </div>
+              <div className="space-y-3">
+                {/* IG Reach */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-0.5">IGリーチ</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-bold text-foreground tabular-nums">{formatNumber(s.ig.current.reach)}</span>
+                      <TrendBadge currentValue={s.ig.current.reach} previousValue={s.ig.previous.reach} />
+                    </div>
+                  </div>
+                  <Sparkline data={s.ig.trend.map(t => t.reach)} color={s.color} />
+                </div>
+                {/* GA4 Sessions */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-0.5">GA4セッション</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-bold text-foreground tabular-nums">{formatNumber(s.ga4.current.sessions)}</span>
+                      <TrendBadge currentValue={s.ga4.current.sessions} previousValue={s.ga4.previous.sessions} />
+                    </div>
+                  </div>
+                  <Sparkline data={s.ga4.trend.map(t => t.sessions)} color={s.color} />
+                </div>
+                {/* IG Engagement Rate */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-0.5">IGエンゲ率</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-bold text-foreground tabular-nums">{formatPercent(s.ig.engRate)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* Trend Chart */}
-      <section className="mb-6 md:mb-8">
-        <div className="rounded-xl border border-border bg-card p-4 md:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
-          <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            成長トレンド（過去6ヶ月）
-          </h3>
+      {/* ❹ Ranking */}
+      <section className="mb-6">
+        <div
+          className="rounded-xl border border-border bg-card p-4 md:p-6"
+          style={{ boxShadow: CARD_SHADOW }}
+        >
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              指標別ランキング
+            </h3>
+            <div className="flex rounded-lg border border-border overflow-hidden">
+              <button
+                onClick={() => setRankingTab('ig')}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${rankingTab === 'ig' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}`}
+              >
+                Instagram
+              </button>
+              <button
+                onClick={() => setRankingTab('ga4')}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${rankingTab === 'ga4' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}`}
+              >
+                GA4
+              </button>
+              <button
+                disabled
+                className="px-3 py-1.5 text-xs font-medium text-muted-foreground/40 cursor-not-allowed"
+              >
+                GBP
+              </button>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            {rankingTab === 'ig' ? 'IGリーチ' : 'GA4セッション'}
+          </p>
+          <div className="space-y-3">
+            {rankedStores.map((s, i) => {
+              const value = getRankValue(s)
+              return (
+                <div key={s.store.id} className="flex items-center gap-3">
+                  <span className="w-5 text-center text-sm font-bold text-muted-foreground">
+                    {i === 0 ? '\u{1F451}' : i + 1}
+                  </span>
+                  <span className="w-24 sm:w-32 text-sm truncate text-foreground">{s.store.name}</span>
+                  <div className="flex-1 h-6 bg-muted/50 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${(value / maxRankValue) * 100}%`, background: s.color }}
+                    />
+                  </div>
+                  <span className="w-16 text-right text-sm font-semibold tabular-nums text-foreground">{formatNumber(value)}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ❺ Growth Trend */}
+      <section className="mb-6">
+        <div
+          className="rounded-xl border border-border bg-card p-4 md:p-6"
+          style={{ boxShadow: CARD_SHADOW }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              成長トレンド（過去6ヶ月）
+            </h3>
+            <select
+              value={trendMetric}
+              onChange={e => setTrendMetric(e.target.value as typeof trendMetric)}
+              className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="reach">リーチ</option>
+              <option value="sessions">セッション</option>
+              <option value="followers">フォロワー</option>
+            </select>
+          </div>
           <div className="h-[220px] md:h-[360px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData}>
@@ -164,331 +373,134 @@ export default function Summary() {
                 <YAxis tick={{ fill: TICK_COLOR, fontSize: 12 }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={TOOLTIP_STYLE} />
                 <Legend />
-                <Line type="monotone" dataKey="igReach" name="Instagram リーチ" stroke="#E1306C" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                <Line type="monotone" dataKey="lineFollowers" name="LINE 友だち" stroke="#00B900" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                <Line type="monotone" dataKey="ga4Sessions" name="GA4 セッション" stroke="#4285F4" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                <Line type="monotone" dataKey="gbpViews" name="GBP 表示" stroke="#EA4335" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                {stores.map((s) => (
+                  <Line
+                    key={s.store.id}
+                    type="monotone"
+                    dataKey={s.store.name}
+                    stroke={s.color}
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                  />
+                ))}
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
       </section>
 
-      {/* Top Posts Section */}
-      {topPosts.length > 0 && (
-        <section className="mb-6 md:mb-8">
-          <div className="rounded-xl border border-border bg-card p-4 md:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                注目投稿
-              </h3>
-              <div className="flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-base" style={{ color: '#E1306C' }}>
-                  photo_camera
-                </span>
-                <span className="text-xs text-muted-foreground">Instagram 今月のTOP3</span>
-              </div>
-            </div>
-
-            {/* Desktop: 3-column grid */}
-            <div className="hidden sm:grid sm:grid-cols-3 gap-3">
-              {topPosts.map((p, i) => {
-                const rankColors = ['#F9AB00', '#C0C0C0', '#CD7F32']
-                const typeColors: Record<string, string> = { FEED: '#E1306C', STORY: '#833AB4', REELS: '#F77737' }
-                const typeLabels: Record<string, string> = { FEED: 'フィード', STORY: 'ストーリー', REELS: 'リール' }
-                return (
-                  <div
-                    key={p.id}
-                    className="rounded-lg border border-border overflow-hidden transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
-                  >
-                    <div className="relative aspect-square bg-muted">
-                      {p.thumbnail_url ? (
-                        <img
-                          src={p.thumbnail_url}
-                          alt={p.caption.slice(0, 20)}
-                          className="size-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="size-full flex items-center justify-center text-4xl text-muted-foreground">
-                          {p.media_product_type === 'REELS' ? '🎬' : '🖼'}
-                        </div>
-                      )}
-                      <div
-                        className="absolute top-2 left-2 size-6 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-md"
-                        style={{ background: rankColors[i] }}
-                      >
-                        {i + 1}
-                      </div>
-                      <div
-                        className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[10px] font-semibold text-white"
-                        style={{ background: typeColors[p.media_product_type] || '#E1306C' }}
-                      >
-                        {typeLabels[p.media_product_type] || p.media_product_type}
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <p className="text-sm text-foreground line-clamp-2 leading-snug mb-2">{p.caption}</p>
-                      <div className="grid grid-cols-3 gap-1 text-center">
-                        <div>
-                          <p className="text-xs font-bold" style={{ color: p.engRate >= 5 ? '#22c55e' : p.engRate >= 2.2 ? '#f59e0b' : '#E1306C' }}>
-                            {p.engRate.toFixed(1)}%
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">ENG率</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-foreground">{formatNumber(p.reach)}</p>
-                          <p className="text-[10px] text-muted-foreground">リーチ</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-foreground">{p.saved ?? 0}</p>
-                          <p className="text-[10px] text-muted-foreground">保存</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Mobile: vertical list */}
-            <div className="sm:hidden space-y-3">
-              {topPosts.map((p, i) => {
-                const rankColors = ['#F9AB00', '#C0C0C0', '#CD7F32']
-                const typeColors: Record<string, string> = { FEED: '#E1306C', STORY: '#833AB4', REELS: '#F77737' }
-                return (
-                  <div
-                    key={p.id}
-                    className="flex items-center gap-3 rounded-lg border border-border p-3"
-                  >
-                    <div
-                      className="shrink-0 size-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                      style={{ background: rankColors[i] }}
-                    >
-                      {i + 1}
-                    </div>
-                    <div className="shrink-0 size-16 rounded-lg overflow-hidden bg-muted">
-                      {p.thumbnail_url ? (
-                        <img src={p.thumbnail_url} alt="" className="size-full object-cover" loading="lazy" />
-                      ) : (
-                        <div className="size-full flex items-center justify-center text-2xl text-muted-foreground">🖼</div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <span
-                          className="text-[10px] font-medium px-1 py-0.5 rounded"
-                          style={{
-                            background: `${typeColors[p.media_product_type] || '#E1306C'}20`,
-                            color: typeColors[p.media_product_type] || '#E1306C',
-                          }}
-                        >
-                          {p.media_product_type}
-                        </span>
-                      </div>
-                      <p className="text-sm text-foreground truncate">{p.caption}</p>
-                      <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
-                        <span className="font-bold" style={{ color: p.engRate >= 5 ? '#22c55e' : '#f59e0b' }}>
-                          ENG {p.engRate.toFixed(1)}%
-                        </span>
-                        <span>リーチ {formatNumber(p.reach)}</span>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* GBP Reviews Section */}
-      <section className="mb-6 md:mb-8">
-        <div className="rounded-xl border border-border bg-card p-4 md:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
-          <div className="flex items-center justify-between mb-4">
+      {/* ❻ LINE Performance */}
+      <section className="mb-6">
+        <div
+          className="rounded-xl border border-border bg-card p-4 md:p-6"
+          style={{ boxShadow: CARD_SHADOW, borderLeft: '4px solid #00B900' }}
+        >
+          <div className="flex items-center gap-2 mb-5">
+            <span className="material-symbols-outlined text-lg" style={{ color: '#00B900' }}>chat</span>
             <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              口コミサマリー
+              LINE配信パフォーマンス
             </h3>
-            <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-base" style={{ color: '#EA4335' }}>
-                reviews
-              </span>
-              <span className="text-xs text-muted-foreground">Google ビジネスプロフィール</span>
-            </div>
+            <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700">
+              全社共通
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Left: Rating Summary */}
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-foreground">{gbpAvgRating.toFixed(1)}</p>
-                  <div className="text-sm" style={{ color: '#F9AB00' }}>
-                    {'★'.repeat(Math.round(gbpAvgRating))}{'☆'.repeat(5 - Math.round(gbpAvgRating))}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{gbpTotalRatings}件の評価</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Left: Mini KPI cards */}
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: '有効友だち', value: formatNumber(lineFollowers), color: '#00B900' },
+                { label: 'ブロック率', value: formatPercent(lineBlockRate), color: lineBlockRate > 20 ? '#EA4335' : '#00B900' },
+                { label: '開封率', value: formatPercent(lineOpenRate), color: lineOpenRate > 50 ? '#00B900' : '#F9AB00' },
+                { label: 'CTR', value: formatPercent(lineCtr), color: lineCtr > 5 ? '#00B900' : '#F9AB00' },
+              ].map(kpi => (
+                <div key={kpi.label} className="rounded-lg bg-muted/40 p-3 text-center">
+                  <p className="text-lg font-bold tabular-nums" style={{ color: kpi.color }}>{kpi.value}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{kpi.label}</p>
                 </div>
-                <div className="flex-1 space-y-1">
-                  {gb.ratingDistribution.slice().sort((a, b) => b.rating - a.rating).map((r) => {
-                    const maxCount = Math.max(...gb.ratingDistribution.map(d => d.count))
-                    const barWidth = maxCount > 0 ? (r.count / maxCount) * 100 : 0
-                    const ratingColors: Record<number, string> = { 5: '#34A853', 4: '#4285F4', 3: '#F9AB00', 2: '#EA4335', 1: '#D93025' }
-                    return (
-                      <div key={r.rating} className="flex items-center gap-1.5">
-                        <span className="text-xs text-muted-foreground w-5 text-right">{r.rating}★</span>
-                        <div className="flex-1 h-2 bg-muted rounded overflow-hidden">
-                          <div
-                            className="h-full rounded transition-all"
-                            style={{ width: `${barWidth}%`, background: ratingColors[r.rating] || '#999' }}
-                          />
-                        </div>
-                        <span className="text-[10px] text-muted-foreground w-6 text-right">{r.count}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <div className="flex-1 rounded-lg bg-muted/50 p-2 text-center">
-                  <p className="text-sm font-bold" style={{ color: gbpReplyRate >= 73 ? '#34A853' : '#F9AB00' }}>{gbpReplyRate}%</p>
-                  <p className="text-[10px] text-muted-foreground">返信率</p>
-                </div>
-                <div className="flex-1 rounded-lg bg-muted/50 p-2 text-center">
-                  <p className="text-sm font-bold" style={{ color: gbpAvgRating >= 4.6 ? '#34A853' : '#F9AB00' }}>
-                    {gbpAvgRating >= 4.6 ? '良好' : '要改善'}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">業界平均4.6比</p>
-                </div>
-              </div>
+              ))}
             </div>
 
-            {/* Right: Recent Review Cards */}
-            <div className="space-y-2">
-              {gb.reviews.slice(0, 3).map((review, i) => {
-                const borderColors: Record<number, string> = { 5: '#34A853', 4: '#4285F4', 3: '#F9AB00', 2: '#EA4335', 1: '#D93025' }
-                return (
-                  <div
-                    key={i}
-                    className="rounded-lg border border-border p-3"
-                    style={{ borderLeft: `3px solid ${borderColors[review.rating] || '#999'}` }}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs" style={{ color: '#F9AB00' }}>
-                          {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
-                        </span>
-                        <span className="text-xs font-medium text-foreground">{review.author}</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground">{review.date.slice(0, 10)}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{review.text}</p>
-                  </div>
-                )
-              })}
-              {gb.reviews.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-4">口コミデータがありません</p>
+            {/* Right: Recent delivery table */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">直近の配信</p>
+              {line.messages.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 px-2 text-muted-foreground font-semibold">配信日</th>
+                        <th className="text-left py-2 px-2 text-muted-foreground font-semibold">タイトル</th>
+                        <th className="text-right py-2 px-2 text-muted-foreground font-semibold">配信数</th>
+                        <th className="text-right py-2 px-2 text-muted-foreground font-semibold">開封率</th>
+                        <th className="text-right py-2 px-2 text-muted-foreground font-semibold">CTR</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {line.messages.slice(0, 3).map((msg, i) => {
+                        const openRate = msg.delivered > 0 ? (msg.unique_impressions / msg.delivered) * 100 : 0
+                        const ctr = msg.unique_impressions > 0 ? (msg.unique_clicks / msg.unique_impressions) * 100 : 0
+                        return (
+                          <tr key={i} className="border-b border-border last:border-b-0">
+                            <td className="py-2 px-2 text-foreground whitespace-nowrap">{msg.date}</td>
+                            <td className="py-2 px-2 text-foreground truncate max-w-[120px]">{msg.title || msg.body_preview || '-'}</td>
+                            <td className="py-2 px-2 text-right tabular-nums text-foreground">{formatNumber(msg.delivered)}</td>
+                            <td className="py-2 px-2 text-right tabular-nums text-foreground">{formatPercent(openRate)}</td>
+                            <td className="py-2 px-2 text-right tabular-nums text-foreground">{formatPercent(ctr)}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-4">配信データがありません</p>
               )}
             </div>
-          </div>
-
-          <div className="mt-3 pt-2 border-t border-border flex justify-end">
-            <a href="/gbp" className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-              GBP詳細を見る
-              <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            </a>
           </div>
         </div>
       </section>
 
-      {/* Alert Section */}
+      {/* ❼ Alerts & Insights */}
       {alerts.length > 0 && (
         <section>
-          <div className="rounded-xl border border-border bg-card p-4 md:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              アラート（前月比 ±20%超）
-            </h3>
-            <div className="space-y-2">
-              {alerts.map((alert, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm ${
-                    alert.positive
-                      ? 'bg-success-bg text-success'
-                      : 'bg-danger-bg text-danger'
-                  }`}
+          <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            アラート・洞察
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {alerts.map((alert, i) => (
+              <div
+                key={i}
+                className={`flex items-start gap-3 rounded-xl border p-4 ${
+                  alert.type === 'warning'
+                    ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'
+                    : 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20'
+                }`}
+                style={{ boxShadow: CARD_SHADOW, animation: `fadeInUp 0.4s ease-out ${i * 0.06}s both` }}
+              >
+                <span
+                  className="material-symbols-outlined text-lg mt-0.5"
+                  style={{ color: alert.type === 'warning' ? '#F9AB00' : '#34A853' }}
                 >
-                  <span>{alert.positive ? '▲' : '▼'}</span>
-                  <span className="font-medium">{alert.label}</span>
-                  <span className="ml-auto font-semibold">{alert.change}</span>
+                  {alert.icon}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{alert.storeName}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{alert.message}</p>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </section>
       )}
+
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   )
-}
-
-function MediaScoreCard({
-  title,
-  icon,
-  color,
-  href,
-  metrics,
-}: {
-  title: string
-  icon: string
-  color: string
-  href: string
-  metrics: { label: string; value: string }[]
-}) {
-  return (
-    <Link
-      to={href}
-      className="block rounded-xl border border-border bg-card p-3 sm:p-5 relative overflow-hidden transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] cursor-pointer no-underline"
-      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)' }}
-    >
-      <div className="absolute top-0 left-0 w-full h-[3px]" style={{ background: color }} />
-      <div className="flex items-center gap-2 mb-3">
-        <span className="material-symbols-outlined text-lg" style={{ color }}>{icon}</span>
-        <span className="text-sm font-semibold text-foreground">{title}</span>
-        <span className="material-symbols-outlined text-sm text-muted-foreground ml-auto">arrow_forward</span>
-      </div>
-      <div className="space-y-2">
-        {metrics.map((m) => (
-          <div key={m.label} className="flex justify-between items-baseline">
-            <span className="text-xs text-muted-foreground">{m.label}</span>
-            <span className="text-sm font-bold text-foreground">{m.value}</span>
-          </div>
-        ))}
-      </div>
-    </Link>
-  )
-}
-
-function getAlerts(data: { instagram: { current: { reach: number; followers_count: number; impressions: number }; previous: { reach: number; followers_count: number; impressions: number } }; line: { current: { followers: number }; previous: { followers: number } }; ga4: { current: { sessions: number; conversions: number }; previous: { sessions: number; conversions: number } }; gbp: { current: { views_maps: number; views_search: number; actions_website: number; actions_phone: number }; previous: { views_maps: number; views_search: number; actions_website: number; actions_phone: number } } }) {
-  const alerts: { label: string; change: string; positive: boolean }[] = []
-
-  const check = (label: string, current: number, previous: number) => {
-    if (!previous) return
-    const pct = ((current - previous) / previous) * 100
-    if (Math.abs(pct) > 20) {
-      alerts.push({
-        label,
-        change: `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`,
-        positive: pct > 0,
-      })
-    }
-  }
-
-  check('Instagram リーチ', data.instagram.current.reach, data.instagram.previous.reach)
-  check('Instagram フォロワー', data.instagram.current.followers_count, data.instagram.previous.followers_count)
-  check('LINE 友だち', data.line.current.followers, data.line.previous.followers)
-  check('GA4 セッション', data.ga4.current.sessions, data.ga4.previous.sessions)
-  check('GA4 CV数', data.ga4.current.conversions, data.ga4.previous.conversions)
-  check('GBP 表示回数', data.gbp.current.views_maps + data.gbp.current.views_search, data.gbp.previous.views_maps + data.gbp.previous.views_search)
-  check('GBP アクション', data.gbp.current.actions_website + data.gbp.current.actions_phone, data.gbp.previous.actions_website + data.gbp.previous.actions_phone)
-
-  return alerts
 }

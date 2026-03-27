@@ -11,14 +11,13 @@ const REPORT_LABELS: Record<ReportType, string> = {
   gbp: 'GBP',
 }
 
-const STORE_NAMES = ['海鮮居酒屋魚魯こ', '練馬鳥長・新潟', '魚とシャリUROKO']
-
 interface ExportDropdownProps {
   currentType: ReportType
   storeIndex?: number
+  storeNames?: string[]
 }
 
-export default function ExportDropdown({ currentType, storeIndex = 0 }: ExportDropdownProps) {
+export default function ExportDropdown({ currentType, storeIndex = 0, storeNames = [] }: ExportDropdownProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
@@ -89,7 +88,7 @@ export default function ExportDropdown({ currentType, storeIndex = 0 }: ExportDr
               店舗を選択
             </p>
             <div className="space-y-0.5">
-              {STORE_NAMES.map((name, i) => (
+              {storeNames.map((name, i) => (
                 <button
                   key={i}
                   onClick={() => goToReport(currentType, i)}

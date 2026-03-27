@@ -2,6 +2,7 @@ export interface InstagramStoreSettings {
   storeName: string
   accessToken: string
   userId: string
+  appId: string
   appSecret: string
 }
 

@@ -11,9 +11,198 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+    <style>
+      /* ── Warm Orbit Loading Screen ── */
+      #loading-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #F7F5F2;
+        transition: opacity 0.4s ease, transform 0.4s ease;
+      }
+      @media (prefers-color-scheme: dark) {
+        #loading-screen { background: #1A1510; }
+      }
+      .dark #loading-screen { background: #1A1510; }
+      #loading-screen.fade-out {
+        opacity: 0;
+        transform: scale(1.03);
+        pointer-events: none;
+      }
+
+      /* Logo container */
+      .ls-logo-wrap {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        animation: ls-fade-in 0.8s ease-out both;
+      }
+      .ls-logo-wrap img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      /* Light logo (dark bg) hidden by default, shown in dark mode */
+      .ls-logo-light { display: none; }
+      .ls-logo-dark  { display: block; }
+      @media (prefers-color-scheme: dark) {
+        .ls-logo-light { display: block; }
+        .ls-logo-dark  { display: none; }
+      }
+      .dark .ls-logo-light { display: block; }
+      .dark .ls-logo-dark  { display: none; }
+
+      /* Orbital glow ring */
+      .ls-orbit {
+        position: absolute;
+        inset: -8px;
+        border-radius: 50%;
+        border: 2px solid transparent;
+        animation: ls-orbit-spin 2.5s linear infinite;
+      }
+      .ls-orbit::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 24px;
+        height: 4px;
+        border-radius: 2px;
+        background: #CC5500;
+        box-shadow: 0 0 12px #CC5500, 0 0 24px rgba(204, 85, 0, 0.4);
+      }
+      @media (prefers-color-scheme: dark) {
+        .ls-orbit::before {
+          background: #E87428;
+          box-shadow: 0 0 12px #E87428, 0 0 24px rgba(232, 116, 40, 0.4);
+        }
+      }
+      .dark .ls-orbit::before {
+        background: #E87428;
+        box-shadow: 0 0 12px #E87428, 0 0 24px rgba(232, 116, 40, 0.4);
+      }
+
+      /* Brand text */
+      .ls-brand {
+        margin-top: 28px;
+        font-family: 'Inter', sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: #3D3028;
+        opacity: 0;
+        animation: ls-fade-in 0.6s ease-out 0.5s both;
+      }
+      @media (prefers-color-scheme: dark) {
+        .ls-brand { color: #F0EBE5; }
+      }
+      .dark .ls-brand { color: #F0EBE5; }
+
+      /* Sub text */
+      .ls-sub {
+        margin-top: 6px;
+        font-family: 'Inter', monospace;
+        font-size: 10px;
+        font-weight: 400;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #8C7E72;
+        opacity: 0;
+        animation: ls-fade-in 0.6s ease-out 0.7s both;
+      }
+
+      /* Progress line */
+      .ls-progress {
+        margin-top: 24px;
+        width: 80px;
+        height: 2px;
+        border-radius: 1px;
+        background: rgba(204, 85, 0, 0.15);
+        overflow: hidden;
+        opacity: 0;
+        animation: ls-fade-in 0.4s ease-out 0.9s both;
+      }
+      @media (prefers-color-scheme: dark) {
+        .ls-progress { background: rgba(232, 116, 40, 0.15); }
+      }
+      .dark .ls-progress { background: rgba(232, 116, 40, 0.15); }
+      .ls-progress-bar {
+        width: 40%;
+        height: 100%;
+        border-radius: 1px;
+        background: #CC5500;
+        animation: ls-progress-slide 1.2s ease-in-out infinite;
+      }
+      @media (prefers-color-scheme: dark) {
+        .ls-progress-bar { background: #E87428; }
+      }
+      .dark .ls-progress-bar { background: #E87428; }
+
+      /* ── Keyframes ── */
+      @keyframes ls-fade-in {
+        from { opacity: 0; transform: scale(0.95); }
+        to   { opacity: 1; transform: scale(1); }
+      }
+      @keyframes ls-orbit-spin {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(360deg); }
+      }
+      @keyframes ls-progress-slide {
+        0%   { transform: translateX(-100%); }
+        50%  { transform: translateX(200%); }
+        100% { transform: translateX(-100%); }
+      }
+
+      /* Respect reduced motion */
+      @media (prefers-reduced-motion: reduce) {
+        .ls-orbit { animation: none; }
+        .ls-progress-bar { animation: none; transform: translateX(0); }
+        .ls-logo-wrap { animation: none; opacity: 1; }
+        .ls-brand, .ls-sub, .ls-progress { animation: none; opacity: 1; }
+        #loading-screen { transition: none; }
+      }
+    </style>
   </head>
   <body>
+    <!-- Warm Orbit Loading Screen (shows before React hydrates) -->
+    <div id="loading-screen">
+      <div class="ls-logo-wrap">
+        <div class="ls-orbit"></div>
+        <img src="/logo-black.png" alt="" class="ls-logo-dark" />
+        <img src="/logo-white.png" alt="" class="ls-logo-light" />
+      </div>
+      <div class="ls-brand">Dawn Dish Project</div>
+      <div class="ls-sub">Analytics</div>
+      <div class="ls-progress"><div class="ls-progress-bar"></div></div>
+    </div>
+
     <div id="root"></div>
+    <script>
+      // Sync loading screen with stored theme (before React loads)
+      // .dark class triggers CSS rules for dark mode colors/logo swap
+      (function() {
+        var theme = localStorage.getItem('theme') || 'system';
+        var isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Fallback: dismiss loading screen after 5s even if React fails to mount
+      setTimeout(function() {
+        var el = document.getElementById('loading-screen');
+        if (el) { el.classList.add('fade-out'); setTimeout(function() { el.remove(); }, 400); }
+      }, 5000);
+    </script>
   </body>
 </html>

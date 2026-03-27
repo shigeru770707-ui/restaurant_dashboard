@@ -34,11 +34,13 @@ const TOOLTIP_STYLE = {
   fontSize: '13px',
 }
 
-const CARD_SHADOW = '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)'
+const CARD_SHADOW = '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)'
 const GRID_COLOR = 'var(--border)'
 const TICK_COLOR = 'var(--muted-foreground)'
 
+/** 飲食業界の平均評価（要更新: 実データに基づく値に差し替え） */
 const AVG_RATING_BENCHMARK = 4.6
+/** 飲食業界の平均返信率（要更新: 実データに基づく値に差し替え）。ベンチマーク表示用であり前月比ではない */
 const REPLY_RATE_BENCHMARK = 73
 const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
 const RATING_COLORS: Record<number, string> = {
@@ -77,7 +79,7 @@ export default function GBP() {
   const { gbpStoreIndex, setGbpStoreIndex } = useStore()
   const { settings } = useApiSettings()
   const [reviewPageSize, setReviewPageSize] = useState(5)
-  const { data: allData } = useDashboardData(selectedMonth, gbpStoreIndex)
+  const { data: allData, stores: dbStores } = useDashboardData(selectedMonth, gbpStoreIndex)
   const data = allData.gbp
 
   const current = data.current
@@ -116,8 +118,10 @@ export default function GBP() {
     : 0
   const displayedReviews = reviews.slice(0, reviewPageSize)
 
-  // Mock reply rate (73% = benchmark)
-  const replyRate = 68
+  // Calculate reply rate from review data (will use real API data when available)
+  const replyRate = totalReviews > 0
+    ? Math.round(reviews.filter((r) => r.hasReply).length / totalReviews * 100)
+    : 0
 
   // Heatmap
   const maxActions = Math.max(...hourlyActions.map((h) => h.actions))
@@ -144,10 +148,10 @@ export default function GBP() {
     <div className="animate-in fade-in duration-400">
       <Header title="Googleビジネスプロフィール 分析" brandIcon={<GBPIcon size={22} />} color="#EA4335" lightBg="#FDECE9" reportType="gbp" storeIndex={gbpStoreIndex} />
 
-      {settings.gbp.length > 1 && (
+      {dbStores.length > 1 && (
         <div className="mb-4 md:mb-6">
           <StoreSelector
-            stores={settings.gbp}
+            stores={dbStores.map((s) => ({ storeName: s.name }))}
             selectedIndex={gbpStoreIndex}
             onSelect={setGbpStoreIndex}
             color="#EA4335"
@@ -156,7 +160,7 @@ export default function GBP() {
       )}
 
       {/* Exposure KPI Cards */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           露出・集客指標
         </h3>
@@ -165,12 +169,12 @@ export default function GBP() {
           <KpiCard title="検索回数合計" value={totalQueries} previousValue={prevTotalQueries} color="#34A853" />
           <KpiCard title="アクション合計" value={totalActions} previousValue={prevTotalActions} color="#F9AB00" />
           <KpiCard title="コンバージョン率" value={formatPercent(convRate)} previousValue={prevConvRate} color="#EA4335" />
-          <KpiCard title="口コミ返信率" value={formatPercent(replyRate)} previousValue={REPLY_RATE_BENCHMARK} color={replyRate >= REPLY_RATE_BENCHMARK ? '#34A853' : '#F9AB00'} />
+          <KpiCard title="口コミ返信率" value={formatPercent(replyRate)} color={replyRate >= REPLY_RATE_BENCHMARK ? '#34A853' : '#F9AB00'} subtitle={`業界平均 ${REPLY_RATE_BENCHMARK}%`} />
         </div>
       </section>
 
       {/* Action Summary Cards */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           アクション内訳
         </h3>
@@ -203,7 +207,7 @@ export default function GBP() {
       </section>
 
       {/* Impression Breakdown + Search Views Chart */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           {/* Impression Breakdown Pie */}
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
@@ -261,7 +265,7 @@ export default function GBP() {
       </section>
 
       {/* Chart Row: Maps vs Search + Actions Trend */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
           <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -305,7 +309,7 @@ export default function GBP() {
       </section>
 
       {/* Action Time Heatmap */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <div className="rounded-xl border border-border bg-card p-4 md:p-6" style={{ boxShadow: CARD_SHADOW }}>
           <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             アクション時間帯ヒートマップ
@@ -362,7 +366,7 @@ export default function GBP() {
       </section>
 
       {/* Review Analysis Row */}
-      <section className="mb-6 md:mb-8">
+      <section className="mb-6">
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           口コミ分析
         </h3>
@@ -495,6 +499,12 @@ export default function GBP() {
                   <span className="text-xs text-muted-foreground">{review.date}</span>
                 </div>
                 <p className="text-sm text-foreground leading-relaxed">{review.text}</p>
+                {review.hasReply && (
+                  <div className="mt-2 flex items-center gap-1 text-[10px] text-green-600 dark:text-green-400">
+                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>reply</span>
+                    返信済み
+                  </div>
+                )}
               </div>
             ))}
 

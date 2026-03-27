@@ -13,19 +13,20 @@ export interface LineMessageInsight {
   unique_impressions: number
   unique_clicks: number
   hour: number
+  minute?: number
   day_of_week: number
   title?: string
   body_preview?: string
   message_type?: LineMessageType
 }
 
-export interface LineDemographic {
+interface LineDemographic {
   genders: { label: string; percentage: number }[]
   ages: { label: string; percentage: number }[]
   areas: { label: string; percentage: number }[]
 }
 
-export interface LineSummary {
+interface LineSummary {
   followers: number
   open_rate: number
   block_rate: number

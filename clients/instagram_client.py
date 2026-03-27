@@ -210,11 +210,17 @@ class InstagramClient:
                     )
                     for item in insights.get("data", []):
                         name = item["name"]
-                        values = item.get("values", [])
-                        if values:
-                            post_data[name] = values[0].get("value", 0)
-                except requests.HTTPError:
-                    logger.warning(f"Could not fetch insights for media {media['id']}")
+                        # v21.0: total_value 形式のレスポンスにも対応
+                        total = item.get("total_value", {})
+                        if total and "value" in total:
+                            post_data[name] = total["value"]
+                        else:
+                            values = item.get("values", [])
+                            if values:
+                                post_data[name] = values[0].get("value", 0)
+                    logger.debug(f"Media insights fetched for {media['id']}: reach={post_data.get('reach', 'N/A')}, impressions={post_data.get('impressions', 'N/A')}")
+                except Exception as e:
+                    logger.warning(f"Could not fetch insights for media {media['id']}: {e}")
 
                 upsert_instagram_post(post_data)
 

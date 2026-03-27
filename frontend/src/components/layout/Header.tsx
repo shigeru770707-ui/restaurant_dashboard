@@ -11,6 +11,7 @@ interface HeaderProps {
   lightBg?: string
   reportType?: ReportType
   storeIndex?: number
+  storeNames?: string[]
 }
 
 const THEME_CYCLE = [
@@ -19,7 +20,7 @@ const THEME_CYCLE = [
   { value: 'system', icon: 'computer', next: 'light' },
 ] as const
 
-export default function Header({ title, icon, brandIcon, color, lightBg, reportType, storeIndex }: HeaderProps) {
+export default function Header({ title, icon, brandIcon, color, lightBg, reportType, storeIndex, storeNames }: HeaderProps) {
   const { theme, setTheme } = useTheme()
   const currentTheme = THEME_CYCLE.find((t) => t.value === theme) ?? THEME_CYCLE[0]
 
@@ -59,7 +60,7 @@ export default function Header({ title, icon, brandIcon, color, lightBg, reportT
           {/* Desktop only: Export dropdown */}
           {reportType && (
             <div className="hidden md:block">
-              <ExportDropdown currentType={reportType} storeIndex={storeIndex} />
+              <ExportDropdown currentType={reportType} storeIndex={storeIndex} storeNames={storeNames} />
             </div>
           )}
           {/* Mobile only: Theme toggle */}

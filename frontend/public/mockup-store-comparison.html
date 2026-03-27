@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>店舗比較ダッシュボード — 全体サマリー</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: system-ui, -apple-system, sans-serif; background: #F8F9FA; color: #111827; }
+  .card { background: #fff; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .store-card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+  .store-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .heatmap-good { background: #D1FAE5; color: #065F46; }
+  .heatmap-mid  { background: #FEF3C7; color: #92400E; }
+  .heatmap-bad  { background: #FEE2E2; color: #991B1B; }
+  .tab-active { background: #111827; color: #fff; }
+  .tab-inactive { background: #E5E7EB; color: #374151; }
+</style>
+</head>
+<body class="min-h-screen pb-12">
+<div class="max-w-6xl mx-auto px-4 py-6">
+
+<!-- ❶ ヘッダー -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+  <h1 class="text-2xl font-bold text-gray-900">全体サマリー</h1>
+  <select class="mt-2 sm:mt-0 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <option selected>2026年3月</option>
+    <option>2026年2月</option>
+    <option>2026年1月</option>
+    <option>2025年12月</option>
+    <option>2025年11月</option>
+    <option>2025年10月</option>
+  </select>
+</div>
+
+<!-- ❷ ヒートマップ概況 -->
+<div class="card p-4 sm:p-6 mb-6 overflow-x-auto">
+  <h2 class="text-lg font-semibold mb-4">指標ヒートマップ</h2>
+  <table class="w-full min-w-[640px] text-sm">
+    <thead>
+      <tr class="text-left text-gray-500 text-xs uppercase tracking-wider">
+        <th class="pb-3 pr-4">店舗</th>
+        <th class="pb-3 px-2 text-center">IGフォロワー</th>
+        <th class="pb-3 px-2 text-center">IGリーチ</th>
+        <th class="pb-3 px-2 text-center">IGエンゲ率</th>
+        <th class="pb-3 px-2 text-center">IG投稿数</th>
+        <th class="pb-3 px-2 text-center">GA4セッション</th>
+        <th class="pb-3 px-2 text-center">GA4直帰率</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- 魚魯こ -->
+      <tr class="border-t border-gray-100">
+        <td class="py-3 pr-4 whitespace-nowrap flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full inline-block flex-shrink-0" style="background:#4285F4"></span>
+          海鮮居酒屋魚魯こ
+        </td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-mid text-xs font-medium">2,516</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-bad text-xs font-medium">3,967</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-good text-xs font-medium">2.1%</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-bad text-xs font-medium">4</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-bad text-xs font-medium">234</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-good text-xs font-medium">31%</span></td>
+      </tr>
+      <!-- Vento e Mare -->
+      <tr class="border-t border-gray-100">
+        <td class="py-3 pr-4 whitespace-nowrap flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full inline-block flex-shrink-0" style="background:#34A853"></span>
+          Vento e Mare
+        </td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-mid text-xs font-medium">2,663</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-mid text-xs font-medium">7,898</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-mid text-xs font-medium">1.8%</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-good text-xs font-medium">8</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-mid text-xs font-medium">950</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-mid text-xs font-medium">38%</span></td>
+      </tr>
+      <!-- 練馬鳥長 -->
+      <tr class="border-t border-gray-100">
+        <td class="py-3 pr-4 whitespace-nowrap flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full inline-block flex-shrink-0" style="background:#F9AB00"></span>
+          練馬鳥長新潟
+        </td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-bad text-xs font-medium">2,411</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-mid text-xs font-medium">8,460</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-good text-xs font-medium">2.4%</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-mid text-xs font-medium">5</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-good text-xs font-medium">1,052</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-bad text-xs font-medium">71%</span></td>
+      </tr>
+      <!-- UROKO -->
+      <tr class="border-t border-gray-100">
+        <td class="py-3 pr-4 whitespace-nowrap flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full inline-block flex-shrink-0" style="background:#EA4335"></span>
+          魚とシャリUROKO
+        </td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-good text-xs font-medium">3,023</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-good text-xs font-medium">13,485</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-mid text-xs font-medium">1.5%</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-good text-xs font-medium">8</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-mid text-xs font-medium">743</span></td>
+        <td class="py-3 px-2 text-center"><span class="inline-block px-2 py-1 rounded heatmap-good text-xs font-medium">27%</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ❸ 店舗カード × 4 -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+  <!-- 魚魯こ -->
+  <div class="card store-card overflow-hidden">
+    <div class="h-1" style="background:#4285F4"></div>
+    <div class="p-5">
+      <h3 class="font-bold text-base mb-3 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full" style="background:#4285F4"></span>
+        海鮮居酒屋魚魯こ
+      </h3>
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-500">IGリーチ</span>
+            <div class="text-lg font-semibold">3,967</div>
+          </div>
+          <span class="text-xs text-red-500 font-medium">↓ 12%</span>
+          <svg width="80" height="28" viewBox="0 0 80 28" class="flex-shrink-0">
+            <polyline points="0,22 16,18 32,24 48,20 64,16 80,22" fill="none" stroke="#4285F4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-500">GA4セッション</span>
+            <div class="text-lg font-semibold">234</div>
+          </div>
+          <span class="text-xs text-red-500 font-medium">↓ 8%</span>
+          <svg width="80" height="28" viewBox="0 0 80 28" class="flex-shrink-0">
+            <polyline points="0,14 16,12 32,16 48,18 64,20 80,22" fill="none" stroke="#4285F4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-500">IGエンゲージメント率</span>
+            <div class="text-lg font-semibold">2.1%</div>
+          </div>
+          <span class="text-xs text-green-600 font-medium">↑ 0.3pt</span>
+          <svg width="80" height="28" viewBox="0 0 80 28" class="flex-shrink-0">
+            <polyline points="0,22 16,20 32,18 48,16 64,12 80,8" fill="none" stroke="#4285F4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vento e Mare -->
+  <div class="card store-card overflow-hidden">
+    <div class="h-1" style="background:#34A853"></div>
+    <div class="p-5">
+      <h3 class="font-bold text-base mb-3 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full" style="background:#34A853"></span>
+        Vento e Mare
+      </h3>
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-500">IGリーチ</span>
+            <div class="text-lg font-semibold">7,898</div>
+          </div>
+          <span class="text-xs text-green-600 font-medium">↑ 15%</span>
+          <svg width="80" height="28" viewBox="0 0 80 28" class="flex-shrink-0">
+            <polyline points="0,24 16,20 32,18 48,14 64,10 80,8" fill="none" stroke="#34A853" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-500">GA4セッション</span>
+            <div class="text-lg font-semibold">950</div>
+          </div>
+          <span class="text-xs text-green-600 font-medium">↑ 22%</span>
+          <svg width="80" height="28" viewBox="0 0 80 28" class="flex-shrink-0">
+            <polyline points="0,24 16,22 32,18 48,14 64,10 80,6" fill="none" stroke="#34A853" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-500">IGエンゲージメント率</span>
+            <div class="text-lg font-semibold">1.8%</div>
+          </div>
+          <span class="text-xs text-red-500 font-medium">↓ 0.2pt</span>
+          <svg width="80" height="28" viewBox="0 0 80 28" class="flex-shrink-0">
+            <polyline points="0,10 16,12 32,14 48,16 64,18 80,20" fill="none" stroke="#34A853" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 練馬鳥長 -->
+  <div class="card store-card overflow-hidden">
+    <div class="h-1" style="background:#F9AB00"></div>
+    <div class="p-5">
+      <h3 class="font-bold text-base mb-3 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full" style="background:#F9AB00"></span>
+        練馬鳥長新潟
+      </h3>
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-500">IGリーチ</span>
+            <div class="text-lg font-semibold">8,460</div>
+          </div>
+          <span class="text-xs text-green-600 font-medium">↑ 31%</span>
+          <svg width="80" height="28" viewBox="0 0 80 28" class="flex-shrink-0">
+            <polyline points="0,26 16,22 32,18 48,14 64,10 80,4" fill="none" stroke="#F9AB00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-500">GA4セッション</span>
+            <div class="text-lg font-semibold">1,052</div>
+          </div>
+          <span class="text-xs text-green-600 font-medium">↑ 18%</span>
+          <svg width="80" height="28" viewBox="0 0 80 28" class="flex-shrink-0">
+            <polyline points="0,22 16,20 32,16 48,14 64,10 80,6" fill="none" stroke="#F9AB00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-500">IGエンゲージメント率</span>
+            <div class="text-lg font-semibold">2.4%</div>
+          </div>
+          <span class="text-xs text-green-600 font-medium">↑ 0.5pt</span>
+          <svg width="80" height="28" viewBox="0 0 80 28" class="flex-shrink-0">
+            <polyline points="0,24 16,20 32,16 48,14 64,10 80,6" fill="none" stroke="#F9AB00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UROKO -->
+  <div class="card store-card overflow-hidden">
+    <div class="h-1" style="background:#EA4335"></div>
+    <div class="p-5">
+      <h3 class="font-bold text-base mb-3 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full" style="background:#EA4335"></span>
+        魚とシャリUROKO
+      </h3>
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-500">IGリーチ</span>
+            <div class="text-lg font-semibold">13,485</div>
+          </div>
+          <span class="text-xs text-green-600 font-medium">↑ 42%</span>
+          <svg width="80" height="28" viewBox="0 0 80 28" class="flex-shrink-0">
+            <polyline points="0,26 16,22 32,16 48,12 64,8 80,4" fill="none" stroke="#EA4335" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-500">GA4セッション</span>
+            <div class="text-lg font-semibold">743</div>
+          </div>
+          <span class="text-xs text-green-600 font-medium">↑ 5%</span>
+          <svg width="80" height="28" viewBox="0 0 80 28" class="flex-shrink-0">
+            <polyline points="0,18 16,16 32,18 48,14 64,12 80,10" fill="none" stroke="#EA4335" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-500">IGエンゲージメント率</span>
+            <div class="text-lg font-semibold">1.5%</div>
+          </div>
+          <span class="text-xs text-red-500 font-medium">↓ 0.4pt</span>
+          <svg width="80" height="28" viewBox="0 0 80 28" class="flex-shrink-0">
+            <polyline points="0,8 16,12 32,14 48,16 64,20 80,22" fill="none" stroke="#EA4335" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ❹ 指標別ランキング -->
+<div class="card p-5 sm:p-6 mb-6">
+  <h2 class="text-lg font-semibold mb-4">指標別ランキング</h2>
+  <!-- タブ -->
+  <div class="flex gap-2 mb-5">
+    <button onclick="showTab('instagram')" id="tab-instagram" class="tab-active px-4 py-1.5 rounded-full text-sm font-medium transition-colors">Instagram</button>
+    <button onclick="showTab('ga4')" id="tab-ga4" class="tab-inactive px-4 py-1.5 rounded-full text-sm font-medium transition-colors">GA4</button>
+    <button onclick="showTab('gbp')" id="tab-gbp" class="tab-inactive px-4 py-1.5 rounded-full text-sm font-medium transition-colors">GBP</button>
+  </div>
+
+  <!-- Instagram パネル -->
+  <div id="panel-instagram" class="space-y-3">
+    <p class="text-sm text-gray-500 mb-3">IGリーチ（2026年3月）</p>
+    <!-- 1位 UROKO -->
+    <div class="flex items-center gap-3">
+      <span class="w-28 sm:w-36 text-sm truncate flex items-center gap-1.5">
+        <span class="text-base">&#128081;</span>
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#EA4335"></span>
+        UROKO
+      </span>
+      <div class="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden relative">
+        <div class="h-full rounded-full" style="width:100%;background:#EA4335"></div>
+      </div>
+      <span class="text-sm font-semibold w-16 text-right">13,485</span>
+    </div>
+    <!-- 2位 練馬鳥長 -->
+    <div class="flex items-center gap-3">
+      <span class="w-28 sm:w-36 text-sm truncate flex items-center gap-1.5">
+        <span class="text-base opacity-0">&#128081;</span>
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#F9AB00"></span>
+        練馬鳥長
+      </span>
+      <div class="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden">
+        <div class="h-full rounded-full" style="width:62.7%;background:#F9AB00"></div>
+      </div>
+      <span class="text-sm font-semibold w-16 text-right">8,460</span>
+    </div>
+    <!-- 3位 Vento -->
+    <div class="flex items-center gap-3">
+      <span class="w-28 sm:w-36 text-sm truncate flex items-center gap-1.5">
+        <span class="text-base opacity-0">&#128081;</span>
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#34A853"></span>
+        Vento e Mare
+      </span>
+      <div class="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden">
+        <div class="h-full rounded-full" style="width:58.6%;background:#34A853"></div>
+      </div>
+      <span class="text-sm font-semibold w-16 text-right">7,898</span>
+    </div>
+    <!-- 4位 魚魯こ -->
+    <div class="flex items-center gap-3">
+      <span class="w-28 sm:w-36 text-sm truncate flex items-center gap-1.5">
+        <span class="text-base opacity-0">&#128081;</span>
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#4285F4"></span>
+        魚魯こ
+      </span>
+      <div class="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden">
+        <div class="h-full rounded-full" style="width:29.4%;background:#4285F4"></div>
+      </div>
+      <span class="text-sm font-semibold w-16 text-right">3,967</span>
+    </div>
+  </div>
+
+  <!-- GA4 パネル -->
+  <div id="panel-ga4" class="space-y-3 hidden">
+    <p class="text-sm text-gray-500 mb-3">GA4セッション数（2026年3月）</p>
+    <div class="flex items-center gap-3">
+      <span class="w-28 sm:w-36 text-sm truncate flex items-center gap-1.5">
+        <span class="text-base">&#128081;</span>
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#F9AB00"></span>
+        練馬鳥長
+      </span>
+      <div class="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden">
+        <div class="h-full rounded-full" style="width:100%;background:#F9AB00"></div>
+      </div>
+      <span class="text-sm font-semibold w-16 text-right">1,052</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="w-28 sm:w-36 text-sm truncate flex items-center gap-1.5">
+        <span class="text-base opacity-0">&#128081;</span>
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#34A853"></span>
+        Vento e Mare
+      </span>
+      <div class="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden">
+        <div class="h-full rounded-full" style="width:90.3%;background:#34A853"></div>
+      </div>
+      <span class="text-sm font-semibold w-16 text-right">950</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="w-28 sm:w-36 text-sm truncate flex items-center gap-1.5">
+        <span class="text-base opacity-0">&#128081;</span>
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#EA4335"></span>
+        UROKO
+      </span>
+      <div class="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden">
+        <div class="h-full rounded-full" style="width:70.6%;background:#EA4335"></div>
+      </div>
+      <span class="text-sm font-semibold w-16 text-right">743</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="w-28 sm:w-36 text-sm truncate flex items-center gap-1.5">
+        <span class="text-base opacity-0">&#128081;</span>
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#4285F4"></span>
+        魚魯こ
+      </span>
+      <div class="flex-1 h-7 bg-gray-100 rounded-full overflow-hidden">
+        <div class="h-full rounded-full" style="width:22.2%;background:#4285F4"></div>
+      </div>
+      <span class="text-sm font-semibold w-16 text-right">234</span>
+    </div>
+  </div>
+
+  <!-- GBP パネル -->
+  <div id="panel-gbp" class="space-y-3 hidden">
+    <p class="text-sm text-gray-500 mb-3">GBPデータは次回アップデートで追加予定</p>
+    <div class="text-center py-8 text-gray-400">
+      <svg class="mx-auto mb-2" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Coming soon
+    </div>
+  </div>
+</div>
+
+<!-- ❺ 成長トレンド -->
+<div class="card p-5 sm:p-6 mb-6">
+  <h2 class="text-lg font-semibold mb-1">成長トレンド</h2>
+  <p class="text-sm text-gray-500 mb-4">IGリーチ推移（10月〜3月）</p>
+  <div class="overflow-x-auto">
+    <svg viewBox="0 0 600 220" class="w-full min-w-[480px]" style="max-height:260px">
+      <!-- Y axis labels -->
+      <text x="0" y="25" font-size="10" fill="#6B7280">15K</text>
+      <text x="0" y="75" font-size="10" fill="#6B7280">10K</text>
+      <text x="0" y="125" font-size="10" fill="#6B7280">5K</text>
+      <text x="0" y="175" font-size="10" fill="#6B7280">0</text>
+      <!-- Grid lines -->
+      <line x1="35" y1="20" x2="590" y2="20" stroke="#E5E7EB" stroke-width="0.5"/>
+      <line x1="35" y1="70" x2="590" y2="70" stroke="#E5E7EB" stroke-width="0.5"/>
+      <line x1="35" y1="120" x2="590" y2="120" stroke="#E5E7EB" stroke-width="0.5"/>
+      <line x1="35" y1="170" x2="590" y2="170" stroke="#E5E7EB" stroke-width="1"/>
+
+      <!-- 月ラベル -->
+      <text x="75" y="195" font-size="11" fill="#6B7280" text-anchor="middle">10月</text>
+      <text x="170" y="195" font-size="11" fill="#6B7280" text-anchor="middle">11月</text>
+      <text x="265" y="195" font-size="11" fill="#6B7280" text-anchor="middle">12月</text>
+      <text x="360" y="195" font-size="11" fill="#6B7280" text-anchor="middle">1月</text>
+      <text x="455" y="195" font-size="11" fill="#6B7280" text-anchor="middle">2月</text>
+      <text x="550" y="195" font-size="11" fill="#6B7280" text-anchor="middle">3月</text>
+
+      <!-- Grouped bars per month (4 bars per group, width=16, gap=3) -->
+      <!-- 10月 -->
+      <rect x="42" y="145" width="16" height="25" rx="2" fill="#4285F4"/>
+      <rect x="61" y="130" width="16" height="40" rx="2" fill="#34A853"/>
+      <rect x="80" y="140" width="16" height="30" rx="2" fill="#F9AB00"/>
+      <rect x="99" y="110" width="16" height="60" rx="2" fill="#EA4335"/>
+
+      <!-- 11月 -->
+      <rect x="137" y="140" width="16" height="30" rx="2" fill="#4285F4"/>
+      <rect x="156" y="125" width="16" height="45" rx="2" fill="#34A853"/>
+      <rect x="175" y="130" width="16" height="40" rx="2" fill="#F9AB00"/>
+      <rect x="194" y="100" width="16" height="70" rx="2" fill="#EA4335"/>
+
+      <!-- 12月 -->
+      <rect x="232" y="138" width="16" height="32" rx="2" fill="#4285F4"/>
+      <rect x="251" y="118" width="16" height="52" rx="2" fill="#34A853"/>
+      <rect x="270" y="122" width="16" height="48" rx="2" fill="#F9AB00"/>
+      <rect x="289" y="88" width="16" height="82" rx="2" fill="#EA4335"/>
+
+      <!-- 1月 -->
+      <rect x="327" y="142" width="16" height="28" rx="2" fill="#4285F4"/>
+      <rect x="346" y="115" width="16" height="55" rx="2" fill="#34A853"/>
+      <rect x="365" y="118" width="16" height="52" rx="2" fill="#F9AB00"/>
+      <rect x="384" y="78" width="16" height="92" rx="2" fill="#EA4335"/>
+
+      <!-- 2月 -->
+      <rect x="422" y="136" width="16" height="34" rx="2" fill="#4285F4"/>
+      <rect x="441" y="108" width="16" height="62" rx="2" fill="#34A853"/>
+      <rect x="460" y="108" width="16" height="62" rx="2" fill="#F9AB00"/>
+      <rect x="479" y="68" width="16" height="102" rx="2" fill="#EA4335"/>
+
+      <!-- 3月 (actual data: 3967, 7898, 8460, 13485 → scale 15K=0, 0=170) -->
+      <rect x="517" y="130" width="16" height="40" rx="2" fill="#4285F4"/>
+      <rect x="536" y="91" width="16" height="79" rx="2" fill="#34A853"/>
+      <rect x="555" y="85" width="16" height="85" rx="2" fill="#F9AB00"/>
+      <rect x="574" y="35" width="16" height="135" rx="2" fill="#EA4335"/>
+
+      <!-- 凡例 -->
+      <rect x="160" y="208" width="10" height="10" rx="2" fill="#4285F4"/>
+      <text x="174" y="217" font-size="10" fill="#6B7280">魚魯こ</text>
+      <rect x="230" y="208" width="10" height="10" rx="2" fill="#34A853"/>
+      <text x="244" y="217" font-size="10" fill="#6B7280">Vento</text>
+      <rect x="290" y="208" width="10" height="10" rx="2" fill="#F9AB00"/>
+      <text x="304" y="217" font-size="10" fill="#6B7280">練馬鳥長</text>
+      <rect x="370" y="208" width="10" height="10" rx="2" fill="#EA4335"/>
+      <text x="384" y="217" font-size="10" fill="#6B7280">UROKO</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ❻ LINE 配信パフォーマンス -->
+<div class="card p-5 sm:p-6 mb-6">
+  <h2 class="text-lg font-semibold mb-5 flex items-center gap-2">
+    <span class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style="background:#06C755">L</span>
+    LINE 配信パフォーマンス <span class="text-sm font-normal text-gray-500">— 全社共通</span>
+  </h2>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- 左: KPIカード群 -->
+    <div class="grid grid-cols-2 gap-3">
+      <div class="card border-l-4 p-4" style="border-left-color:#06C755">
+        <div class="text-xs text-gray-500">有効友だち</div>
+        <div class="text-xl font-bold mt-1">9,833</div>
+        <div class="text-xs text-green-600 mt-0.5">+124</div>
+      </div>
+      <div class="card border-l-4 p-4" style="border-left-color:#06C755">
+        <div class="text-xs text-gray-500">ブロック率</div>
+        <div class="text-xl font-bold mt-1">31.5%</div>
+        <div class="text-xs text-gray-400 mt-0.5">月間配信 2回</div>
+      </div>
+      <div class="card border-l-4 p-4" style="border-left-color:#06C755">
+        <div class="text-xs text-gray-500">平均開封率</div>
+        <div class="text-xl font-bold mt-1">39.2%</div>
+      </div>
+      <div class="card border-l-4 p-4" style="border-left-color:#06C755">
+        <div class="text-xs text-gray-500">平均CTR</div>
+        <div class="text-xl font-bold mt-1">4.4%</div>
+      </div>
+    </div>
+
+    <!-- 右: 直近配信テーブル -->
+    <div>
+      <h3 class="text-sm font-medium text-gray-600 mb-2">直近配信</h3>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs text-gray-500 border-b border-gray-200">
+            <th class="pb-2">日付</th>
+            <th class="pb-2">タイプ</th>
+            <th class="pb-2 text-right">開封率</th>
+            <th class="pb-2 text-right">CTR</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-b border-gray-100">
+            <td class="py-2.5">3/13</td>
+            <td class="py-2.5">ターゲティング</td>
+            <td class="py-2.5 text-right font-semibold text-green-700">79.7%</td>
+            <td class="py-2.5 text-right">2.0%</td>
+          </tr>
+          <tr>
+            <td class="py-2.5">3/5</td>
+            <td class="py-2.5">ターゲティング</td>
+            <td class="py-2.5 text-right text-red-600">6.8%</td>
+            <td class="py-2.5 text-right">1.6%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 開封率 折れ線 -->
+  <div class="mt-6">
+    <p class="text-xs text-gray-500 mb-2">開封率推移（直近6回配信）</p>
+    <svg viewBox="0 0 400 80" class="w-full" style="max-width:500px">
+      <line x1="20" y1="70" x2="380" y2="70" stroke="#E5E7EB" stroke-width="1"/>
+      <!-- points: 35%, 42%, 38%, 41%, 6.8%, 79.7% → normalize 0-80% → y: 70 - (val/80)*60 -->
+      <polyline
+        points="40,43.75 108,38.5 176,41.5 244,39.25 312,64.9 380,10.2"
+        fill="none" stroke="#06C755" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="40" cy="43.75" r="3" fill="#06C755"/>
+      <circle cx="108" cy="38.5" r="3" fill="#06C755"/>
+      <circle cx="176" cy="41.5" r="3" fill="#06C755"/>
+      <circle cx="244" cy="39.25" r="3" fill="#06C755"/>
+      <circle cx="312" cy="64.9" r="3" fill="#EA4335"/>
+      <circle cx="380" cy="10.2" r="3" fill="#06C755"/>
+      <text x="40" y="38" font-size="9" fill="#6B7280" text-anchor="middle">35%</text>
+      <text x="108" y="33" font-size="9" fill="#6B7280" text-anchor="middle">42%</text>
+      <text x="176" y="36" font-size="9" fill="#6B7280" text-anchor="middle">38%</text>
+      <text x="244" y="34" font-size="9" fill="#6B7280" text-anchor="middle">41%</text>
+      <text x="312" y="60" font-size="9" fill="#EA4335" text-anchor="middle">6.8%</text>
+      <text x="380" y="8" font-size="9" fill="#06C755" text-anchor="middle">79.7%</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ❼ アラート・洞察 -->
+<div class="mb-6">
+  <h2 class="text-lg font-semibold mb-4">アラート・洞察</h2>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="card p-4 border-l-4 border-l-amber-400">
+      <div class="flex items-start gap-2">
+        <span class="text-lg">&#9888;&#65039;</span>
+        <div>
+          <div class="font-semibold text-sm">練馬鳥長新潟</div>
+          <p class="text-sm text-gray-600 mt-1">直帰率 <span class="font-bold text-red-600">71%</span> — FB広告LPの見直し推奨</p>
+        </div>
+      </div>
+    </div>
+    <div class="card p-4 border-l-4 border-l-emerald-400">
+      <div class="flex items-start gap-2">
+        <span class="text-lg">&#10024;</span>
+        <div>
+          <div class="font-semibold text-sm">魚とシャリUROKO</div>
+          <p class="text-sm text-gray-600 mt-1">リーチ/フォロワー比 <span class="font-bold text-green-700">4.46倍</span> — ノウハウ横展開推奨</p>
+        </div>
+      </div>
+    </div>
+    <div class="card p-4 border-l-4 border-l-blue-400">
+      <div class="flex items-start gap-2">
+        <span class="text-lg">&#128201;</span>
+        <div>
+          <div class="font-semibold text-sm">海鮮居酒屋魚魯こ</div>
+          <p class="text-sm text-gray-600 mt-1">月間投稿 <span class="font-bold">4件</span> — 投稿頻度の増加を検討</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /max-w-6xl -->
+
+<script>
+function showTab(tab) {
+  ['instagram','ga4','gbp'].forEach(t => {
+    document.getElementById('panel-' + t).classList.toggle('hidden', t !== tab);
+    document.getElementById('tab-' + t).className = t === tab
+      ? 'tab-active px-4 py-1.5 rounded-full text-sm font-medium transition-colors'
+      : 'tab-inactive px-4 py-1.5 rounded-full text-sm font-medium transition-colors';
+  });
+}
+</script>
+</body>
+</html>

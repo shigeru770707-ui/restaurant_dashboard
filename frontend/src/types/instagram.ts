@@ -28,7 +28,7 @@ export interface InstagramPost {
   taps_back?: number
 }
 
-export interface InstagramSummary {
+interface InstagramSummary {
   followers_count: number
   reach: number
   impressions: number

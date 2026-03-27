@@ -7,7 +7,7 @@ import { formatNumber, formatPercent } from '@/utils/format'
 import type { ReportProps } from './ReportSummary'
 
 const LINE_GREEN = '#00B900'
-const DEMO_COLORS = ['#00B900', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6']
+const DEMO_COLORS = ['#00B900', '#5B78A8', '#C06A30', '#B8534B', '#8B6CAD']
 
 export default function ReportLine({ selectedMonth, storeIndex, storeName, generatedDate, isPdf }: ReportProps) {
   const { data: allData } = useDashboardData(selectedMonth, storeIndex)
@@ -271,7 +271,7 @@ export default function ReportLine({ selectedMonth, storeIndex, storeName, gener
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                     <XAxis dataKey="label" tick={{ fontSize: 7, fill: '#666' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 7, fill: '#666' }} unit="%" axisLine={false} tickLine={false} />
-                    <Bar dataKey="clickRate" name="クリック率" fill="#3B82F6" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="clickRate" name="クリック率" fill="#5B78A8" radius={[2, 2, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

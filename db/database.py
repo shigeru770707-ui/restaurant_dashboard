@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pandas as pd
 
+import hashlib
+
 from db.crypto import CREDENTIAL_FIELDS, decrypt_row, encrypt_dict
 
 DB_PATH = Path(os.environ.get("DB_PATH", Path(__file__).parent.parent / "dashboard.db"))
@@ -36,6 +38,7 @@ def _migrate_stores_table(conn):
     existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(stores)").fetchall()}
     new_columns = {
         "instagram_access_token": "TEXT DEFAULT ''",
+        "instagram_app_id": "TEXT DEFAULT ''",
         "instagram_app_secret": "TEXT DEFAULT ''",
         "line_channel_access_token": "TEXT DEFAULT ''",
         "ga4_service_account_json": "TEXT DEFAULT ''",
@@ -48,10 +51,20 @@ def _migrate_stores_table(conn):
         "line_scraper_schedule": "TEXT DEFAULT ''",
         "line_scraper_last_run": "TIMESTAMP",
         "credentials_updated_at": "TIMESTAMP",
+        "instagram_token_expires_at": "TIMESTAMP",
+        "instagram_auto_refresh_days": "INTEGER DEFAULT 10",
+        "ga4_path_prefix": "TEXT DEFAULT ''",
     }
     for col_name, col_type in new_columns.items():
         if col_name not in existing_cols:
             conn.execute(f"ALTER TABLE stores ADD COLUMN {col_name} {col_type}")
+
+
+def _migrate_ga4_metrics_table(conn):
+    """ga4_metrics テーブルに conversions 列を追加（マイグレーション）."""
+    existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(ga4_metrics)").fetchall()}
+    if "conversions" not in existing_cols:
+        conn.execute("ALTER TABLE ga4_metrics ADD COLUMN conversions INTEGER DEFAULT 0")
 
 
 def _migrate_line_message_metrics_table(conn):
@@ -61,6 +74,8 @@ def _migrate_line_message_metrics_table(conn):
         "title": "TEXT",
         "body_preview": "TEXT",
         "message_type": "TEXT DEFAULT 'text'",
+        "sent_at": "TEXT",
+        "cms_url": "TEXT",
     }
     for col_name, col_type in new_columns.items():
         if col_name not in existing_cols:
@@ -111,6 +126,12 @@ def init_db():
                 shares INTEGER DEFAULT 0,
                 likes INTEGER DEFAULT 0,
                 comments INTEGER DEFAULT 0,
+                thumbnail_url TEXT DEFAULT '',
+                media_url TEXT DEFAULT '',
+                replies INTEGER DEFAULT 0,
+                exits INTEGER DEFAULT 0,
+                taps_forward INTEGER DEFAULT 0,
+                taps_back INTEGER DEFAULT 0,
                 FOREIGN KEY (store_id) REFERENCES stores(id)
             );
 
@@ -191,12 +212,50 @@ def init_db():
                 UNIQUE(date, store_id)
             );
 
+            CREATE TABLE IF NOT EXISTS ga4_custom_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date DATE NOT NULL,
+                store_id INTEGER NOT NULL,
+                event_name TEXT NOT NULL,
+                event_count INTEGER DEFAULT 0,
+                unique_users INTEGER DEFAULT 0,
+                FOREIGN KEY (store_id) REFERENCES stores(id),
+                UNIQUE(date, store_id, event_name)
+            );
+
             CREATE INDEX IF NOT EXISTS idx_ig_date_store ON instagram_metrics(date, store_id);
             CREATE INDEX IF NOT EXISTS idx_line_date_store ON line_metrics(date, store_id);
             CREATE INDEX IF NOT EXISTS idx_ga4_date_store ON ga4_metrics(date, store_id);
             CREATE INDEX IF NOT EXISTS idx_gbp_date_store ON gbp_metrics(date, store_id);
+            CREATE INDEX IF NOT EXISTS idx_ga4_events_date_store ON ga4_custom_events(date, store_id);
         """)
+        # ---- users テーブル ----
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'staff'
+                    CHECK(role IN ('hq', 'pr', 'manager', 'staff')),
+                store_id INTEGER,
+                display_name TEXT NOT NULL DEFAULT '',
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (store_id) REFERENCES stores(id)
+            )
+        """)
+        # 初期HQアカウント（存在しなければ挿入）
+        existing_admin = conn.execute(
+            "SELECT id FROM users WHERE username = 'admin'"
+        ).fetchone()
+        if not existing_admin:
+            conn.execute(
+                "INSERT INTO users (username, password_hash, role, display_name) VALUES (?, ?, 'hq', '管理者')",
+                ("admin", _hash_password("admin123")),
+            )
         _migrate_stores_table(conn)
+        _migrate_ga4_metrics_table(conn)
         _migrate_line_message_metrics_table(conn)
         # line_message_metrics にユニークインデックス追加（既存テーブル対応）
         conn.execute("""
@@ -207,6 +266,98 @@ def init_db():
         existing_post_cols = {row[1] for row in conn.execute("PRAGMA table_info(instagram_posts)").fetchall()}
         if "media_product_type" not in existing_post_cols:
             conn.execute("ALTER TABLE instagram_posts ADD COLUMN media_product_type TEXT DEFAULT 'FEED'")
+        if "thumbnail_url" not in existing_post_cols:
+            conn.execute("ALTER TABLE instagram_posts ADD COLUMN thumbnail_url TEXT DEFAULT ''")
+        if "media_url" not in existing_post_cols:
+            conn.execute("ALTER TABLE instagram_posts ADD COLUMN media_url TEXT DEFAULT ''")
+        # ストーリー固有の指標カラムを追加
+        for col in ("replies", "exits", "taps_forward", "taps_back"):
+            if col not in existing_post_cols:
+                conn.execute(f"ALTER TABLE instagram_posts ADD COLUMN {col} INTEGER DEFAULT 0")
+
+
+# ---- パスワードハッシュ ----
+
+def _hash_password(password: str) -> str:
+    """SHA-256 でパスワードをハッシュ化."""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    """パスワードとハッシュを比較."""
+    return _hash_password(password) == password_hash
+
+
+# ---- ユーザー CRUD ----
+
+def authenticate_user(username: str, password: str) -> dict | None:
+    """ユーザー名とパスワードで認証. 成功時はユーザー辞書を返す."""
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM users WHERE username = ? AND is_active = 1",
+            (username,),
+        ).fetchone()
+        if not row:
+            return None
+        user = dict(row)
+        if not verify_password(password, user["password_hash"]):
+            return None
+        # password_hash は返さない
+        user.pop("password_hash", None)
+        return user
+
+
+def get_all_users() -> list[dict]:
+    """全ユーザーを取得（password_hash除外）."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT id, username, role, store_id, display_name, is_active, created_at, updated_at FROM users ORDER BY id"
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_user_by_id(user_id: int) -> dict | None:
+    """IDでユーザーを取得（password_hash除外）."""
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT id, username, role, store_id, display_name, is_active, created_at, updated_at FROM users WHERE id = ?",
+            (user_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def create_user(username: str, password: str, role: str, display_name: str, store_id: int | None = None) -> int:
+    """ユーザーを作成. 作成されたユーザーIDを返す."""
+    with get_connection() as conn:
+        cursor = conn.execute(
+            "INSERT INTO users (username, password_hash, role, store_id, display_name) VALUES (?, ?, ?, ?, ?)",
+            (username, _hash_password(password), role, store_id, display_name),
+        )
+        return cursor.lastrowid
+
+
+def update_user(user_id: int, **kwargs) -> bool:
+    """ユーザー情報を更新."""
+    if "password" in kwargs:
+        kwargs["password_hash"] = _hash_password(kwargs.pop("password"))
+    allowed = {"username", "password_hash", "role", "store_id", "display_name", "is_active"}
+    fields = {k: v for k, v in kwargs.items() if k in allowed}
+    if not fields:
+        return False
+    fields["updated_at"] = "CURRENT_TIMESTAMP"
+    sets = ", ".join(
+        f"{k} = CURRENT_TIMESTAMP" if v == "CURRENT_TIMESTAMP" else f"{k} = ?"
+        for k, v in fields.items()
+    )
+    values = [v for v in fields.values() if v != "CURRENT_TIMESTAMP"]
+    with get_connection() as conn:
+        conn.execute(f"UPDATE users SET {sets} WHERE id = ?", (*values, user_id))
+        return True
+
+
+def delete_user(user_id: int) -> bool:
+    """ユーザーを無効化（論理削除）."""
+    return update_user(user_id, is_active=0)
 
 
 # ---- 店舗 CRUD ----
@@ -340,6 +491,21 @@ def upsert_ga4_traffic_source(data: dict):
         )
 
 
+def upsert_ga4_custom_event(data: dict):
+    """GA4カスタムイベントをupsert."""
+    with get_connection() as conn:
+        cols = list(data.keys())
+        col_str = ", ".join(cols)
+        placeholders = ", ".join("?" for _ in cols)
+        update_cols = [c for c in cols if c not in ("date", "store_id", "event_name")]
+        update_str = ", ".join(f"{c} = excluded.{c}" for c in update_cols)
+        conn.execute(
+            f"""INSERT INTO ga4_custom_events ({col_str}) VALUES ({placeholders})
+                ON CONFLICT(date, store_id, event_name) DO UPDATE SET {update_str}""",
+            tuple(data.values()),
+        )
+
+
 def upsert_ga4_page(data: dict):
     """GA4ページデータをupsert."""
     with get_connection() as conn:
@@ -428,11 +594,14 @@ def get_ga4_pages_df(store_id: int, start_date: str, end_date: str, limit: int =
 
 
 def get_line_message_metrics_df(store_id: int, start_date: str, end_date: str) -> pd.DataFrame:
-    """LINEメッセージ配信メトリクスを取得."""
+    """LINEメッセージ配信メトリクスを取得（自動応答系を除外）."""
     with get_connection() as conn:
         df = pd.read_sql_query(
             """SELECT * FROM line_message_metrics
                WHERE store_id = ? AND date BETWEEN ? AND ?
+               AND request_id NOT LIKE 'welcome_response_%'
+               AND request_id NOT LIKE 'auto_response_%'
+               AND request_id NOT LIKE 'chat_%'
                ORDER BY date DESC""",
             conn,
             params=(store_id, start_date, end_date),
@@ -455,3 +624,126 @@ def get_all_stores_metrics_summary(table: str, start_date: str, end_date: str) -
     if "date" in df.columns:
         df["date"] = pd.to_datetime(df["date"])
     return df
+
+
+# ---- GA4 店舗別・比較用クエリ ----
+
+def get_ga4_custom_events_df(store_id: int, start_date: str, end_date: str) -> pd.DataFrame:
+    """GA4カスタムイベント集計を取得."""
+    with get_connection() as conn:
+        df = pd.read_sql_query(
+            """SELECT event_name, SUM(event_count) as event_count,
+                      SUM(unique_users) as unique_users
+               FROM ga4_custom_events
+               WHERE store_id = ? AND date BETWEEN ? AND ?
+               GROUP BY event_name
+               ORDER BY event_count DESC""",
+            conn,
+            params=(store_id, start_date, end_date),
+        )
+    return df
+
+
+def get_ga4_overview(start_date: str, end_date: str) -> dict:
+    """GA4全体概要（全店舗サマリー + 店舗別KPI一覧）."""
+    with get_connection() as conn:
+        # 全店舗合計
+        totals = pd.read_sql_query(
+            """SELECT SUM(sessions) as sessions, SUM(active_users) as active_users,
+                      SUM(new_users) as new_users, SUM(page_views) as page_views,
+                      AVG(bounce_rate) as bounce_rate,
+                      AVG(avg_session_duration) as avg_session_duration,
+                      SUM(conversions) as conversions
+               FROM ga4_metrics
+               WHERE date BETWEEN ? AND ?""",
+            conn,
+            params=(start_date, end_date),
+        )
+        # 店舗別サマリー
+        store_breakdown = pd.read_sql_query(
+            """SELECT s.id as store_id, s.name as store_name,
+                      s.ga4_path_prefix,
+                      SUM(m.sessions) as sessions, SUM(m.active_users) as active_users,
+                      SUM(m.new_users) as new_users, SUM(m.page_views) as page_views,
+                      AVG(m.bounce_rate) as bounce_rate,
+                      AVG(m.avg_session_duration) as avg_session_duration,
+                      SUM(m.conversions) as conversions
+               FROM ga4_metrics m
+               JOIN stores s ON m.store_id = s.id
+               WHERE m.date BETWEEN ? AND ? AND s.ga4_path_prefix != ''
+               GROUP BY s.id, s.name
+               ORDER BY SUM(m.sessions) DESC""",
+            conn,
+            params=(start_date, end_date),
+        )
+        # 日次トレンド（全体）
+        daily_trend = pd.read_sql_query(
+            """SELECT date, SUM(sessions) as sessions,
+                      SUM(active_users) as active_users,
+                      SUM(page_views) as page_views,
+                      SUM(conversions) as conversions
+               FROM ga4_metrics
+               WHERE date BETWEEN ? AND ?
+               GROUP BY date ORDER BY date""",
+            conn,
+            params=(start_date, end_date),
+        )
+        # カスタムイベント（全体）
+        custom_events = pd.read_sql_query(
+            """SELECT event_name, SUM(event_count) as event_count,
+                      SUM(unique_users) as unique_users
+               FROM ga4_custom_events
+               WHERE date BETWEEN ? AND ?
+               GROUP BY event_name ORDER BY event_count DESC""",
+            conn,
+            params=(start_date, end_date),
+        )
+    return {
+        "totals": totals.to_dict(orient="records")[0] if len(totals) > 0 else {},
+        "store_breakdown": store_breakdown.to_dict(orient="records"),
+        "daily_trend": daily_trend.to_dict(orient="records"),
+        "custom_events": custom_events.to_dict(orient="records"),
+    }
+
+
+def get_ga4_store_comparison(start_date: str, end_date: str) -> list[dict]:
+    """GA4店舗間比較データ（店舗別日次トレンド付き）."""
+    with get_connection() as conn:
+        df = pd.read_sql_query(
+            """SELECT s.id as store_id, s.name as store_name, m.date,
+                      m.sessions, m.active_users, m.new_users,
+                      m.page_views, m.bounce_rate, m.conversions
+               FROM ga4_metrics m
+               JOIN stores s ON m.store_id = s.id
+               WHERE m.date BETWEEN ? AND ? AND s.ga4_path_prefix != ''
+               ORDER BY s.name, m.date""",
+            conn,
+            params=(start_date, end_date),
+        )
+    if "date" in df.columns:
+        df["date"] = pd.to_datetime(df["date"])
+    result = []
+    for store_id, group in df.groupby("store_id"):
+        result.append({
+            "store_id": int(store_id),
+            "store_name": group["store_name"].iloc[0],
+            "totals": {
+                "sessions": int(group["sessions"].sum()),
+                "active_users": int(group["active_users"].sum()),
+                "new_users": int(group["new_users"].sum()),
+                "page_views": int(group["page_views"].sum()),
+                "bounce_rate": round(float(group["bounce_rate"].mean()), 2),
+                "conversions": int(group["conversions"].sum()),
+            },
+            "daily": group[["date", "sessions", "active_users", "page_views", "conversions"]].to_dict(orient="records"),
+        })
+    return result
+
+
+def get_stores_with_ga4() -> list[dict]:
+    """GA4パスプレフィックスが設定されている店舗一覧を取得."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT id, name, store_key, ga4_path_prefix FROM stores WHERE ga4_path_prefix != '' ORDER BY id"
+        ).fetchall()
+        return [dict(r) for r in rows]

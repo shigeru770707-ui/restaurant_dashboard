@@ -3,7 +3,6 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
 import { useDashboardData } from '@/hooks/useDashboardData'
-import { getMockDataForMonth } from '@/utils/mockData'
 import { formatNumber, formatPercent } from '@/utils/format'
 
 const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
@@ -16,6 +15,7 @@ function StarText({ rating }: { rating: number }) {
 export interface ReportProps {
   selectedMonth: string
   storeIndex: number
+  storeId: number
   storeName: string
   generatedDate: string
   storeNames: string[]
@@ -31,11 +31,9 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
 
   const igEngRate = ig.current.reach > 0 ? (ig.current.impressions / ig.current.reach) * 10 : 0
   const prevIgEngRate = ig.previous.reach > 0 ? (ig.previous.impressions / ig.previous.reach) * 10 : 0
-  const lineOpenRate = 70.5
   const blockRate = ln.current.followers > 0 ? (ln.current.blocks / ln.current.followers) * 100 : 0
   const gbpTotalActions = gb.current.actions_website + gb.current.actions_phone + gb.current.actions_directions
   const gbpAvgRating = gb.reviews.length > 0 ? gb.reviews.reduce((s, r) => s + r.rating, 0) / gb.reviews.length : 0
-  const gbpReplyRate = 68
 
   const posts = ig.posts.map((p) => {
     const eng = p.like_count + p.comments_count + (p.saved ?? 0) + (p.shares ?? 0)
@@ -51,15 +49,8 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
   }))
   const totalRatings = gb.ratingDistribution.reduce((s, r) => s + r.count, 0)
 
-  const storeComparison = storeNames.map((name, i) => {
-    const sd = getMockDataForMonth(selectedMonth, i)
-    const sActions = sd.gbp.current.actions_website + sd.gbp.current.actions_phone + sd.gbp.current.actions_directions
-    const sAvg = sd.gbp.reviews.length > 0 ? sd.gbp.reviews.reduce((s, r) => s + r.rating, 0) / sd.gbp.reviews.length : 0
-    return {
-      name, igFollowers: sd.instagram.current.followers_count, igReach: sd.instagram.current.reach,
-      lineFollowers: sd.line.current.followers, ga4Sessions: sd.ga4.current.sessions, gbpRating: sAvg, gbpActions: sActions,
-    }
-  })
+  // Store comparison requires all-store data which is not available from single-store props
+  const storeComparison: { name: string; igFollowers: number; igReach: number; lineFollowers: number; ga4Sessions: number; gbpRating: number; gbpActions: number }[] = []
 
   // Sparkline trend data
   const sparkData = ig.trend.map((item, i) => ({
@@ -120,7 +111,7 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
           { label: 'IGフォロワー', value: formatNumber(ig.current.followers_count), change: diff(ig.current.followers_count, ig.previous.followers_count), changeColor: diffColor(ig.current.followers_count, ig.previous.followers_count), accent: '#E1306C' },
           { label: 'IG ENG率', value: formatPercent(igEngRate), change: diff(igEngRate, prevIgEngRate), changeColor: diffColor(igEngRate, prevIgEngRate), accent: '#E1306C' },
           { label: 'LINE友だち', value: formatNumber(ln.current.followers), change: diff(ln.current.followers, ln.previous.followers), changeColor: diffColor(ln.current.followers, ln.previous.followers), accent: '#00B900' },
-          { label: 'LINE開封率', value: formatPercent(lineOpenRate), change: '', accent: '#00B900' },
+          { label: 'LINE開封率', value: lineAvgOpenRate > 0 ? formatPercent(lineAvgOpenRate) : '-', change: '', accent: '#00B900' },
           { label: 'GA4セッション', value: formatNumber(ga.current.sessions), change: diff(ga.current.sessions, ga.previous.sessions), changeColor: diffColor(ga.current.sessions, ga.previous.sessions), accent: '#4285F4' },
           { label: 'GA4 CV数', value: formatNumber(ga.current.conversions), change: diff(ga.current.conversions, ga.previous.conversions), changeColor: diffColor(ga.current.conversions, ga.previous.conversions), accent: '#4285F4' },
           { label: 'GBP評価', value: `${gbpAvgRating.toFixed(1)}★`, change: '', accent: '#EA4335' },
@@ -171,7 +162,7 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
         <div className={isPdf ? "space-y-1.5" : "space-y-3"}>
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
             <h3 className={`${isPdf ? "text-[11px]" : "text-xs"} font-bold text-gray-700 ${isPdf ? "mb-1" : "mb-2"} flex items-center gap-1`}>
-              <span style={{ color: '#6366F1' }}>WHO</span> - ファン層分析
+              <span style={{ color: '#CC5500' }}>WHO</span> - ファン層分析
             </h3>
             <div className="mb-2">
               <p className="text-[9px] text-gray-500 mb-1">性別構成（LINE友だち）</p>
@@ -191,7 +182,7 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
                   <BarChart data={genderAge} layout="vertical" margin={{ left: 0, right: 5, top: 0, bottom: 0 }}>
                     <XAxis type="number" hide />
                     <YAxis dataKey="name" type="category" tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} width={35} />
-                    <Bar dataKey="value" fill="#6366F1" radius={[0, 3, 3, 0]} barSize={12} label={{ position: 'right', fontSize: 8, fill: '#666', formatter: (v: number) => `${v}%` }} />
+                    <Bar dataKey="value" fill="#CC5500" radius={[0, 3, 3, 0]} barSize={12} label={{ position: 'right', fontSize: 8, fill: '#666', formatter: (v: number) => `${v}%` }} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -199,11 +190,11 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
             <div>
               <p className="text-[9px] text-gray-500 mb-1">地域 (GA4)</p>
               <div className="space-y-0.5">
-                {(isPdf ? ga.demographic.regions.slice(0, 3) : ga.demographic.regions).map((r, i) => (
+                {(isPdf ? (ga.demographic.regions ?? []).slice(0, 3) : (ga.demographic.regions ?? [])).map((r, i) => (
                   <div key={i} className="flex items-center gap-1">
                     <div className="w-16 text-[9px] text-gray-600 truncate">{r.label}</div>
                     <div className="flex-1 h-2.5 bg-gray-100 rounded overflow-hidden">
-                      <div className="h-full rounded" style={{ width: `${r.percentage}%`, background: '#6366F1', opacity: 1 - i * 0.15 }} />
+                      <div className="h-full rounded" style={{ width: `${r.percentage}%`, background: '#CC5500', opacity: 1 - i * 0.15 }} />
                     </div>
                     <div className="w-8 text-[8px] text-gray-500 text-right">{r.percentage}%</div>
                   </div>
@@ -212,7 +203,7 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
             </div>
             {!isPdf && <div className="mt-2 flex items-center gap-2 text-[9px] text-gray-500">
               <span>デバイス:</span>
-              {ga.demographic.devices.map((d, i) => (
+              {(ga.demographic.devices ?? []).map((d, i) => (
                 <span key={i} className="px-1.5 py-0.5 rounded bg-gray-100 text-[8px]">{d.label} {d.percentage}%</span>
               ))}
             </div>}
@@ -411,8 +402,8 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
             </div>
             <div className="grid grid-cols-2 gap-2 text-center text-[9px]">
               <div className="rounded bg-gray-50 py-1.5">
-                <p className="font-bold text-gray-900" style={{ color: gbpReplyRate >= 73 ? '#34A853' : '#F9AB00' }}>{gbpReplyRate}%</p>
-                <p className="text-gray-500">返信率 (目標73%)</p>
+                <p className="font-bold text-gray-900" style={{ color: '#999' }}>-</p>
+                <p className="text-gray-500">返信率 (データなし)</p>
               </div>
               <div className="rounded bg-gray-50 py-1.5">
                 <p className="font-bold text-gray-900" style={{ color: gbpAvgRating >= 4.6 ? '#34A853' : '#F9AB00' }}>{gbpAvgRating >= 4.6 ? '良好' : '要改善'}</p>
@@ -447,30 +438,34 @@ export default function ReportSummary({ selectedMonth, storeIndex, storeName, ge
 
           <div className={`rounded-lg border border-gray-200 ${isPdf ? "p-2" : "p-3"}`}>
             <h3 className={`${isPdf ? "text-[11px]" : "text-xs"} font-bold text-gray-700 ${isPdf ? "mb-1" : "mb-2"} flex items-center gap-1`}>
-              <span style={{ color: '#6366F1' }}>ACTION</span> - 店舗間比較
+              <span style={{ color: '#CC5500' }}>ACTION</span> - 店舗間比較
             </h3>
-            <table className="w-full text-[9px]">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-1 font-medium text-gray-500">店舗</th>
-                  <th className="text-right py-1 font-medium text-gray-500">IG</th>
-                  <th className="text-right py-1 font-medium text-gray-500">LINE</th>
-                  <th className="text-right py-1 font-medium text-gray-500">GA4</th>
-                  <th className="text-right py-1 font-medium text-gray-500">★</th>
-                </tr>
-              </thead>
-              <tbody>
-                {storeComparison.map((s, i) => (
-                  <tr key={i} className="border-b border-gray-100" style={{ background: i === storeIndex ? '#EEF2FF' : undefined }}>
-                    <td className="py-1 font-medium text-gray-800">{s.name}</td>
-                    <td className="py-1 text-right text-gray-600">{formatNumber(s.igFollowers)}</td>
-                    <td className="py-1 text-right text-gray-600">{formatNumber(s.lineFollowers)}</td>
-                    <td className="py-1 text-right text-gray-600">{formatNumber(s.ga4Sessions)}</td>
-                    <td className="py-1 text-right text-gray-600">{s.gbpRating.toFixed(1)}</td>
+            {storeComparison.length > 0 ? (
+              <table className="w-full text-[9px]">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-1 font-medium text-gray-500">店舗</th>
+                    <th className="text-right py-1 font-medium text-gray-500">IG</th>
+                    <th className="text-right py-1 font-medium text-gray-500">LINE</th>
+                    <th className="text-right py-1 font-medium text-gray-500">GA4</th>
+                    <th className="text-right py-1 font-medium text-gray-500">★</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {storeComparison.map((s, i) => (
+                    <tr key={i} className="border-b border-gray-100" style={{ background: i === storeIndex ? '#FFF0E5' : undefined }}>
+                      <td className="py-1 font-medium text-gray-800">{s.name}</td>
+                      <td className="py-1 text-right text-gray-600">{formatNumber(s.igFollowers)}</td>
+                      <td className="py-1 text-right text-gray-600">{formatNumber(s.lineFollowers)}</td>
+                      <td className="py-1 text-right text-gray-600">{formatNumber(s.ga4Sessions)}</td>
+                      <td className="py-1 text-right text-gray-600">{s.gbpRating.toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-[9px] text-gray-400 text-center py-2">店舗間比較データは現在利用できません</p>
+            )}
           </div>
 
           <div className={`rounded-lg border-2 border-indigo-200 bg-indigo-50 ${isPdf ? "p-2" : "p-3"}`}>

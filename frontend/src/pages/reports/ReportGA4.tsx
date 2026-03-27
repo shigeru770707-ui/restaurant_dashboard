@@ -7,7 +7,7 @@ import { formatNumber, formatPercent } from '@/utils/format'
 import type { ReportProps } from './ReportSummary'
 
 const GA4_BLUE = '#4285F4'
-const PIE_COLORS = ['#F9AB00', '#4285F4', '#34A853', '#EA4335', '#AB47BC']
+const PIE_COLORS = ['#C06A30', '#2E8B6A', '#5B78A8', '#B8534B', '#8B6CAD']
 const DEVICE_COLORS = ['#4285F4', '#34A853', '#F9AB00']
 const DAY_LABELS = ['月', '火', '水', '木', '金', '土', '日']
 
@@ -91,8 +91,8 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
               <div style={{ height: isPdf ? 90 : 100 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={pieData.slice(0, isPdf ? 8 : 15)} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={isPdf ? 30 : 40}
-                      label={isPdf ? false : ({ name }: { name: string }) => name} labelLine={false}>
+                    <Pie data={pieData.slice(0, isPdf ? 5 : 8)} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={isPdf ? 30 : 40}
+                      label={false} labelLine={false}>
                       {pieData.map((_, i) => (
                         <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
@@ -103,7 +103,7 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
               <div>
                 <table className="w-full text-[9px]">
                   <tbody>
-                    {trafficSources.slice(0, isPdf ? 8 : 15).map((s, i) => (
+                    {trafficSources.slice(0, isPdf ? 5 : 8).map((s, i) => (
                       <tr key={i} className="border-b border-gray-100">
                         <td className="py-0.5 flex items-center gap-1">
                           <span className="w-2 h-2 rounded-full inline-block" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
@@ -175,9 +175,9 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
                 <div style={{ height: 70 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={demographic.devices.map(d => ({ name: d.label, value: d.percentage }))} dataKey="value" nameKey="name"
+                      <Pie data={(demographic.devices ?? []).map(d => ({ name: d.label, value: d.percentage }))} dataKey="value" nameKey="name"
                         cx="50%" cy="50%" innerRadius={15} outerRadius={30} label={({ name, value }) => `${name} ${value}%`} labelLine={false}>
-                        {demographic.devices.map((_, i) => (
+                        {(demographic.devices ?? []).map((_, i) => (
                           <Cell key={i} fill={DEVICE_COLORS[i % DEVICE_COLORS.length]} />
                         ))}
                       </Pie>
@@ -189,7 +189,7 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
                 <p className="text-[9px] text-gray-500 mb-1">年齢層</p>
                 <div style={{ height: 70 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={demographic.ages.map(a => ({ name: a.label, value: a.percentage }))} layout="vertical" margin={{ left: 0, right: 5, top: 0, bottom: 0 }}>
+                    <BarChart data={(demographic.ages ?? []).map(a => ({ name: a.label, value: a.percentage }))} layout="vertical" margin={{ left: 0, right: 5, top: 0, bottom: 0 }}>
                       <XAxis type="number" hide />
                       <YAxis dataKey="name" type="category" tick={{ fontSize: 7, fill: '#666' }} axisLine={false} tickLine={false} width={28} />
                       <Bar dataKey="value" fill={GA4_BLUE} radius={[0, 3, 3, 0]} barSize={8} />
@@ -299,7 +299,7 @@ export default function ReportGA4({ selectedMonth, storeIndex, storeName, genera
                 </tr>
               </thead>
               <tbody>
-                {demographic.regions.slice(0, 3).map((r, i) => (
+                {(demographic.regions ?? []).slice(0, 3).map((r, i) => (
                   <tr key={i} className="border-b border-gray-100">
                     <td className="py-0.5">
                       <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[7px] font-bold text-white inline-flex"

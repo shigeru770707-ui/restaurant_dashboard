@@ -11,6 +11,7 @@ const emptyInstagramStore: InstagramStoreSettings = {
   storeName: '',
   accessToken: '',
   userId: '',
+  appId: '',
   appSecret: '',
 }
 
@@ -24,15 +25,17 @@ const emptyGBPStore: GBPStoreSettings = {
 
 const defaultSettings: ApiSettings = {
   instagram: [
-    { storeName: '海鮮居酒屋魚魯こ', accessToken: '', userId: '', appSecret: '' },
-    { storeName: '練馬鳥長・新潟', accessToken: '', userId: '', appSecret: '' },
-    { storeName: '魚とシャリUROKO', accessToken: '', userId: '', appSecret: '' },
+    { storeName: '海鮮居酒屋魚魯こ', accessToken: '', userId: '', appId: '', appSecret: '' },
+    { storeName: 'Vento e Mare', accessToken: '', userId: '', appId: '', appSecret: '' },
+    { storeName: '練馬鳥長新潟', accessToken: '', userId: '', appId: '', appSecret: '' },
+    { storeName: '魚とシャリUROKO', accessToken: '', userId: '', appId: '', appSecret: '' },
   ],
   line: { channelAccessToken: '', oaEmail: '', oaPassword: '', oaAccountId: '' },
   ga4: { propertyId: '', serviceAccountJson: '' },
   gbp: [
     { storeName: '海鮮居酒屋魚魯こ', oauthClientId: '', oauthClientSecret: '', refreshToken: '', locationId: '' },
-    { storeName: '練馬鳥長・新潟', oauthClientId: '', oauthClientSecret: '', refreshToken: '', locationId: '' },
+    { storeName: 'Vento e Mare', oauthClientId: '', oauthClientSecret: '', refreshToken: '', locationId: '' },
+    { storeName: '練馬鳥長新潟', oauthClientId: '', oauthClientSecret: '', refreshToken: '', locationId: '' },
     { storeName: '魚とシャリUROKO', oauthClientId: '', oauthClientSecret: '', refreshToken: '', locationId: '' },
   ],
 }
